@@ -1,0 +1,145 @@
+package com.mvp.medarchive.ui.recordform
+
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
+import java.io.File
+
+private val TYPES = listOf("病历", "检查单", "处方", "用药", "疫苗", "其他")
+
+@Composable
+fun RecordFormScreen(
+    vm: RecordFormViewModel,
+    onBack: () -> Unit
+) {
+    val state by vm.state.collectAsState()
+    val ctx = LocalContext.current
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    val pickImages = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris -> if (uris.isNotEmpty()) vm.addImageUris(uris) }
+
+    val takePicture = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { ok ->
+        val uri = pendingCameraUri
+        if (ok && uri != null) vm.addImageUris(listOf(uri))
+    }
+
+    fun launchCamera() {
+        val f = File(ctx.cacheDir, "cam_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", f)
+        pendingCameraUri = uri
+        takePicture.launch(uri)
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        Surface(tonalElevation = 2.dp) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+                TextButton(onClick = onBack) { Text("返回") }
+                Text("添加记录", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
+            }
+        }
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("类型", style = MaterialTheme.typography.titleSmall)
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TYPES.forEach { t ->
+                    FilterChip(
+                        selected = state.type == t,
+                        onClick = { vm.onTypeChange(t) },
+                        label = { Text(t) }
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = state.title,
+                onValueChange = vm::onTitleChange,
+                label = { Text("标题") },
+                isError = state.error != null,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = state.hospital,
+                onValueChange = vm::onHospitalChange,
+                label = { Text("医院（可空）") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = state.notes,
+                onValueChange = vm::onNotesChange,
+                label = { Text("备注（可空）") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (state.error != null) {
+                Text(state.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            Text("图片（点击缩略图可移除）", style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { launchCamera() }) { Text("拍照") }
+                OutlinedButton(onClick = { pickImages.launch("image/*") }) { Text("从相册选择") }
+            }
+            if (state.images.isNotEmpty()) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    state.images.forEachIndexed { i, path ->
+                        Thumb(path) { vm.removeImage(i) }
+                    }
+                }
+            }
+            Button(onClick = { vm.save(onBack) }, enabled = !state.saving, modifier = Modifier.fillMaxWidth()) {
+                Text(if (state.saving) "保存中…" else "保存")
+            }
+        }
+    }
+}
+
+@Composable
+private fun Thumb(path: String, onClick: () -> Unit) {
+    val bmp = remember(path) { runCatching { BitmapFactory.decodeFile(path) }.getOrNull() }
+    if (bmp != null) {
+        Image(
+            bitmap = bmp.asImageBitmap(),
+            contentDescription = "移除",
+            modifier = Modifier.size(80.dp).clickable { onClick() }
+        )
+    }
+}
