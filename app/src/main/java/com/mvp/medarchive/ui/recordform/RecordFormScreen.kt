@@ -137,6 +137,13 @@ fun RecordFormScreen(
                         Thumb(path) { vm.removeImage(i) }
                     }
                 }
+                OutlinedButton(onClick = { vm.ocrImages() }, enabled = !state.ocrBusy, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (state.ocrBusy) "识别中…" else "识别图片文字")
+                }
+                val msg = state.ocrMessage
+                if (msg != null) {
+                    Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
             }
             Button(onClick = { vm.save(onBack) }, enabled = !state.saving, modifier = Modifier.fillMaxWidth()) {
                 Text(if (state.saving) "保存中…" else "保存")

@@ -56,5 +56,7 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.7.0")
 
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
+
     testImplementation("junit:junit:4.13.2")
 }
