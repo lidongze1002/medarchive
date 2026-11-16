@@ -22,8 +22,8 @@ import com.mvp.medarchive.ui.theme.MedArchiveTheme
 sealed interface Screen {
     data object List : Screen
     data class Detail(val memberId: Long) : Screen
-    data class RecordForm(val memberId: Long) : Screen
-    data class RecordDetail(val recordId: Long) : Screen
+    data class RecordForm(val memberId: Long, val recordId: Long? = null) : Screen
+    data class RecordDetail(val recordId: Long, val memberId: Long) : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -49,13 +49,16 @@ class MainActivity : ComponentActivity() {
                         ),
                         onBack = { stack = stack.dropLast(1) },
                         onAddRecord = { id -> stack = stack + Screen.RecordForm(id) },
-                        onOpenRecord = { id -> stack = stack + Screen.RecordDetail(id) }
+                        onOpenRecord = { id -> stack = stack + Screen.RecordDetail(id, current.memberId) }
                     )
                     is Screen.RecordForm -> RecordFormScreen(
                         vm = viewModel(
-                            key = "recordform_${current.memberId}",
-                            factory = RecordFormViewModel.factory(application, container.repository, current.memberId)
+                            key = "recordform_${current.memberId}_${current.recordId}",
+                            factory = RecordFormViewModel.factory(
+                                application, container.repository, current.memberId, current.recordId
+                            )
                         ),
+                        isEdit = current.recordId != null,
                         onBack = { stack = stack.dropLast(1) }
                     )
                     is Screen.RecordDetail -> RecordDetailScreen(
@@ -64,6 +67,7 @@ class MainActivity : ComponentActivity() {
                             factory = RecordDetailViewModel.factory(container.repository, current.recordId)
                         ),
                         onBack = { stack = stack.dropLast(1) },
+                        onEdit = { stack = stack + Screen.RecordForm(current.memberId, current.recordId) },
                         onDeleted = { stack = stack.dropLast(1) }
                     )
                 }

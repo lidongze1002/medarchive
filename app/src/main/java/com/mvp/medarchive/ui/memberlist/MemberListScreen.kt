@@ -33,7 +33,7 @@ fun MemberListScreen(
     vm: MemberListViewModel,
     onOpen: (Long) -> Unit
 ) {
-    val members by vm.members.collectAsState()
+    val items by vm.items.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -41,7 +41,7 @@ fun MemberListScreen(
             ExtendedFloatingActionButton(onClick = { showDialog = true }) { Text("+ 添加成员") }
         }
     ) { padding ->
-        if (members.isEmpty()) {
+        if (items.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text("还没有成员，点右下角添加", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -51,16 +51,16 @@ fun MemberListScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(members, key = { it.id }) { m ->
-                    Card(Modifier.fillMaxWidth().clickable { onOpen(m.id) }) {
+                items(items, key = { it.member.id }) { item ->
+                    Card(Modifier.fillMaxWidth().clickable { onOpen(item.member.id) }) {
                         Column(Modifier.padding(16.dp)) {
-                            Text(m.name, style = MaterialTheme.typography.titleMedium)
-                            if (m.allergies.isNotBlank()) {
-                                Text(
-                                    "过敏史：${m.allergies}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
+                            Text(item.member.name, style = MaterialTheme.typography.titleMedium)
+                            if (item.member.birthdate.isNotBlank()) {
+                                Text("生日：${item.member.birthdate}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text("记录 ${item.recordCount} 条", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (item.member.allergies.isNotBlank()) {
+                                Text("过敏史：${item.member.allergies}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -72,8 +72,8 @@ fun MemberListScreen(
     if (showDialog) {
         AddMemberDialog(
             onDismiss = { showDialog = false },
-            onConfirm = { n, bt, al ->
-                vm.add(n, bt, al)
+            onConfirm = { n, b, bt, al, notes ->
+                vm.add(n, b, bt, al, notes)
                 showDialog = false
             }
         )
@@ -83,11 +83,13 @@ fun MemberListScreen(
 @Composable
 private fun AddMemberDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String) -> Unit
+    onConfirm: (String, String, String, String, String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+    var birthdate by remember { mutableStateOf("") }
     var blood by remember { mutableStateOf("") }
     var allergies by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -95,11 +97,13 @@ private fun AddMemberDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("姓名") })
+                OutlinedTextField(value = birthdate, onValueChange = { birthdate = it }, label = { Text("生日（可空，如 1990-01-01）") })
                 OutlinedTextField(value = blood, onValueChange = { blood = it }, label = { Text("血型（可空）") })
                 OutlinedTextField(value = allergies, onValueChange = { allergies = it }, label = { Text("过敏史（可空）") })
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("备注（可空）") })
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(name, blood, allergies) }) { Text("保存") } },
+        confirmButton = { TextButton(onClick = { onConfirm(name, birthdate, blood, allergies, notes) }) { Text("保存") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )
 }

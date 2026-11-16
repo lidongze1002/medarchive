@@ -29,6 +29,7 @@ import com.mvp.medarchive.ui.formatEpochDay
 fun RecordDetailScreen(
     vm: RecordDetailViewModel,
     onBack: () -> Unit,
+    onEdit: () -> Unit,
     onDeleted: () -> Unit
 ) {
     val record by vm.record.collectAsState()
@@ -39,6 +40,8 @@ fun RecordDetailScreen(
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
                 TextButton(onClick = onBack) { Text("返回") }
                 Text("记录详情", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onEdit) { Text("编辑") }
             }
         }
         Column(

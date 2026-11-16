@@ -3,6 +3,7 @@ package com.mvp.medarchive.data
 import com.mvp.medarchive.data.db.MedDatabase
 import com.mvp.medarchive.data.db.Member
 import com.mvp.medarchive.data.db.Record
+import com.mvp.medarchive.data.db.RecordCount
 import com.mvp.medarchive.data.db.RecordImage
 import kotlinx.coroutines.flow.Flow
 
@@ -34,6 +35,21 @@ class MedRepository(
         }
         return id
     }
+
+    suspend fun updateRecord(r: Record) {
+        db.recordDao().update(r)
+    }
+
+    suspend fun appendRecordImages(recordId: Long, images: List<String>) {
+        if (images.isEmpty()) return
+        val existing = db.recordImageDao().byRecord(recordId)
+        val start = (existing.maxOfOrNull { it.sortOrder } ?: -1) + 1
+        images.forEachIndexed { i, path ->
+            db.recordImageDao().insert(RecordImage(recordId = recordId, path = path, sortOrder = start + i))
+        }
+    }
+
+    fun recordCounts(): Flow<List<RecordCount>> = db.recordDao().observeRecordCounts()
 
     suspend fun deleteRecord(id: Long) {
         val imgs = db.recordImageDao().byRecord(id)

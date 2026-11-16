@@ -30,11 +30,33 @@ data class RecordFormState(
 class RecordFormViewModel(
     application: Application,
     private val repository: MedRepository,
-    private val memberId: Long
+    private val memberId: Long,
+    private val recordId: Long? = null
 ) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(RecordFormState())
     val state: StateFlow<RecordFormState> = _state
+
+    fun load() {
+        if (recordId != null) {
+            viewModelScope.launch {
+                val r = repository.record(recordId)
+                _state.value = if (r != null) {
+                    RecordFormState(
+                        type = r.type,
+                        title = r.title,
+                        hospital = r.hospital,
+                        notes = r.notes,
+                        dateEpochDay = r.dateEpochDay
+                    )
+                } else {
+                    RecordFormState()
+                }
+            }
+        } else {
+            _state.value = RecordFormState()
+        }
+    }
 
     fun onTypeChange(v: String) { _state.value = _state.value.copy(type = v) }
     fun onTitleChange(v: String) { _state.value = _state.value.copy(title = v, error = null) }
@@ -66,23 +88,45 @@ class RecordFormViewModel(
         }
         _state.value = s.copy(saving = true, error = null)
         val relativeImages = s.images.map { File(it).name }
-        repository.addRecord(
-            Record(
-                memberId = memberId,
-                type = s.type,
-                title = s.title.trim(),
-                dateEpochDay = s.dateEpochDay,
-                hospital = s.hospital.trim(),
-                notes = s.notes.trim()
-            ),
-            relativeImages
-        )
+        if (recordId == null) {
+            repository.addRecord(
+                Record(
+                    memberId = memberId,
+                    type = s.type,
+                    title = s.title.trim(),
+                    dateEpochDay = s.dateEpochDay,
+                    hospital = s.hospital.trim(),
+                    notes = s.notes.trim()
+                ),
+                relativeImages
+            )
+        } else {
+            val existing = repository.record(recordId)
+            if (existing != null) {
+                repository.updateRecord(
+                    existing.copy(
+                        type = s.type,
+                        title = s.title.trim(),
+                        dateEpochDay = s.dateEpochDay,
+                        hospital = s.hospital.trim(),
+                        notes = s.notes.trim()
+                    )
+                )
+                repository.appendRecordImages(recordId, relativeImages)
+            }
+        }
         _state.value = RecordFormState()
         onSaved()
     }
 
     companion object {
-        fun factory(app: Application, repository: MedRepository, memberId: Long): ViewModelProvider.Factory =
-            viewModelFactory { initializer { RecordFormViewModel(app, repository, memberId) } }
+        fun factory(
+            app: Application,
+            repository: MedRepository,
+            memberId: Long,
+            recordId: Long? = null
+        ): ViewModelProvider.Factory = viewModelFactory {
+            initializer { RecordFormViewModel(app, repository, memberId, recordId) }
+        }
     }
 }

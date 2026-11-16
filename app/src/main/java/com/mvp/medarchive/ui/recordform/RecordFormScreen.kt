@@ -43,11 +43,14 @@ private val TYPES = listOf("病历", "检查单", "处方", "用药", "疫苗", 
 @Composable
 fun RecordFormScreen(
     vm: RecordFormViewModel,
+    isEdit: Boolean,
     onBack: () -> Unit
 ) {
     val state by vm.state.collectAsState()
     val ctx = LocalContext.current
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    LaunchedEffect(Unit) { vm.load() }
 
     val pickImages = rememberLauncherForActivityResult(
         ActivityResultContracts.GetMultipleContents()
@@ -71,7 +74,7 @@ fun RecordFormScreen(
         Surface(tonalElevation = 2.dp) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
                 TextButton(onClick = onBack) { Text("返回") }
-                Text("添加记录", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
+                Text(if (isEdit) "编辑记录" else "添加记录", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
             }
         }
         Column(

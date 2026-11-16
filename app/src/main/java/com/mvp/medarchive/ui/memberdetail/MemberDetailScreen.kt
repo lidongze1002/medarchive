@@ -2,6 +2,7 @@ package com.mvp.medarchive.ui.memberdetail
 
 import android.content.Intent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -23,6 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,6 +46,7 @@ fun MemberDetailScreen(
     val exporting by vm.exporting.collectAsState()
     val shareUri by vm.shareUri.collectAsState()
     val ctx = LocalContext.current
+    var filterType by remember { mutableStateOf<String?>(null) }
 
     val uri = shareUri
     if (uri != null) {
@@ -92,11 +98,20 @@ fun MemberDetailScreen(
             Spacer(Modifier.height(16.dp))
             Text("记录", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
-            if (records.isEmpty()) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = filterType == null, onClick = { filterType = null }, label = { Text("全部") })
+                val types = listOf("病历", "检查单", "处方", "用药", "疫苗", "其他")
+                types.forEach { t ->
+                    FilterChip(selected = filterType == t, onClick = { filterType = t }, label = { Text(t) })
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            val shown = if (filterType == null) records else records.filter { it.type == filterType }
+            if (shown.isEmpty()) {
                 Text("还没有记录，点右下角添加", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    records.forEach { r ->
+                    shown.forEach { r ->
                         Card(Modifier.fillMaxWidth().clickable { onOpenRecord(r.id) }) {
                             Column(Modifier.padding(16.dp)) {
                                 Text(r.title, style = MaterialTheme.typography.titleMedium)
