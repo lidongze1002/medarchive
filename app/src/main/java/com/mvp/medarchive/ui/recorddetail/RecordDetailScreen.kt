@@ -23,7 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.mvp.medarchive.ui.formatEpochDay
+import java.io.File
 
 @Composable
 fun RecordDetailScreen(
@@ -78,12 +80,9 @@ fun RecordDetailScreen(
 
 @Composable
 private fun FullImage(path: String) {
-    val bmp = remember(path) { runCatching { BitmapFactory.decodeFile(path) }.getOrNull() }
-    if (bmp != null) {
-        Image(
-            bitmap = bmp.asImageBitmap(),
-            contentDescription = null,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-        )
-    }
+    AsyncImage(
+        model = File(path),
+        contentDescription = null,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    )
 }

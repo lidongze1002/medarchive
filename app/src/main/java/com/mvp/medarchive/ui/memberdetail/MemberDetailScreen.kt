@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.mvp.medarchive.ui.formatEpochDay
+import com.mvp.medarchive.ui.member.MemberDialog
 
 @Composable
 fun MemberDetailScreen(
@@ -47,6 +49,8 @@ fun MemberDetailScreen(
     val shareUri by vm.shareUri.collectAsState()
     val ctx = LocalContext.current
     var filterType by remember { mutableStateOf<String?>(null) }
+    var showEdit by remember { mutableStateOf(false) }
+    var showDelete by remember { mutableStateOf(false) }
 
     val uri = shareUri
     if (uri != null) {
@@ -95,7 +99,11 @@ fun MemberDetailScreen(
                     Text("过敏史：${m.allergies}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = { showEdit = true }) { Text("编辑") }
+                TextButton(onClick = { showDelete = true }) { Text("删除") }
+            }
+            Spacer(Modifier.height(8.dp))
             Text("记录", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -126,5 +134,30 @@ fun MemberDetailScreen(
                 }
             }
         }
+    }
+
+    if (showEdit) {
+        MemberDialog(
+            initial = member,
+            onDismiss = { showEdit = false },
+            onConfirm = { n, b, bt, al, notes ->
+                vm.updateMember(n, b, bt, al, notes)
+                showEdit = false
+            }
+        )
+    }
+    if (showDelete) {
+        AlertDialog(
+            onDismissRequest = { showDelete = false },
+            title = { Text("删除成员") },
+            text = { Text("确定删除「${member?.name}」？其所有记录与照片也会一并删除。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDelete = false
+                    vm.deleteMember(onBack)
+                }) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { showDelete = false }) { Text("取消") } }
+        )
     }
 }

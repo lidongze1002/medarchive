@@ -66,6 +66,26 @@ class MemberDetailViewModel(
 
     fun deleteRecord(id: Long) = viewModelScope.launch { repository.deleteRecord(id) }
 
+    fun updateMember(name: String, birthdate: String, bloodType: String, allergies: String, notes: String) =
+        viewModelScope.launch {
+            val m = _member.value ?: return@launch
+            repository.updateMember(
+                m.copy(
+                    name = name.trim(),
+                    birthdate = birthdate.trim(),
+                    bloodType = bloodType.trim(),
+                    allergies = allergies.trim(),
+                    notes = notes.trim()
+                )
+            )
+            _member.value = repository.member(memberId)
+        }
+
+    fun deleteMember(onDeleted: () -> Unit) = viewModelScope.launch {
+        repository.deleteMember(memberId)
+        onDeleted()
+    }
+
     companion object {
         fun factory(app: Application, repository: MedRepository, memberId: Long): ViewModelProvider.Factory =
             viewModelFactory { initializer { MemberDetailViewModel(app, repository, memberId) } }

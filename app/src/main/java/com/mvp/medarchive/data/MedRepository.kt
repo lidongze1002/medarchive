@@ -18,7 +18,12 @@ class MedRepository(
 
     suspend fun addMember(m: Member): Long = db.memberDao().insert(m)
 
+    suspend fun updateMember(m: Member) {
+        db.memberDao().update(m)
+    }
+
     suspend fun deleteMember(id: Long) {
+        db.recordDao().byMember(id).forEach { deleteRecord(it.id) }
         db.memberDao().delete(id)
     }
 

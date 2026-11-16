@@ -62,6 +62,7 @@ class RecordFormViewModel(
     fun onTitleChange(v: String) { _state.value = _state.value.copy(title = v, error = null) }
     fun onHospitalChange(v: String) { _state.value = _state.value.copy(hospital = v) }
     fun onNotesChange(v: String) { _state.value = _state.value.copy(notes = v) }
+    fun onDateChange(epochDay: Long) { _state.value = _state.value.copy(dateEpochDay = epochDay) }
 
     fun addImageUris(uris: List<Uri>) = viewModelScope.launch(Dispatchers.IO) {
         val paths = uris.mapNotNull { uri ->

@@ -30,4 +30,7 @@ interface RecordDao {
 
     @Query("SELECT memberId, COUNT(*) AS cnt FROM records GROUP BY memberId")
     fun observeRecordCounts(): Flow<List<RecordCount>>
+
+    @Query("DELETE FROM records WHERE memberId = :memberId")
+    suspend fun deleteByMember(memberId: Long)
 }

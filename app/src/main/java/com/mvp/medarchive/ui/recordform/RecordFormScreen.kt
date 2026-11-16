@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -24,6 +27,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,10 +40,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
 import java.io.File
 
 private val TYPES = listOf("病历", "检查单", "处方", "用药", "疫苗", "其他")
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordFormScreen(
     vm: RecordFormViewModel,
@@ -49,6 +55,7 @@ fun RecordFormScreen(
     val state by vm.state.collectAsState()
     val ctx = LocalContext.current
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { vm.load() }
 
@@ -101,6 +108,9 @@ fun RecordFormScreen(
                 isError = state.error != null,
                 modifier = Modifier.fillMaxWidth()
             )
+            OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("日期：${com.mvp.medarchive.ui.formatEpochDay(state.dateEpochDay)}")
+            }
             OutlinedTextField(
                 value = state.hospital,
                 onValueChange = vm::onHospitalChange,
@@ -133,16 +143,31 @@ fun RecordFormScreen(
             }
         }
     }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = state.dateEpochDay * 86_400_000L
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { vm.onDateChange(it / 86_400_000L) }
+                    showDatePicker = false
+                }) { Text("确定") }
+            },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("取消") } }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 }
 
 @Composable
 private fun Thumb(path: String, onClick: () -> Unit) {
-    val bmp = remember(path) { runCatching { BitmapFactory.decodeFile(path) }.getOrNull() }
-    if (bmp != null) {
-        Image(
-            bitmap = bmp.asImageBitmap(),
-            contentDescription = "移除",
-            modifier = Modifier.size(80.dp).clickable { onClick() }
-        )
-    }
+    AsyncImage(
+        model = File(path),
+        contentDescription = "移除",
+        modifier = Modifier.size(80.dp).clickable { onClick() }
+    )
 }

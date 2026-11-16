@@ -10,14 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.mvp.medarchive.ui.member.MemberDialog
 
 @Composable
 fun MemberListScreen(
@@ -70,7 +68,7 @@ fun MemberListScreen(
     }
 
     if (showDialog) {
-        AddMemberDialog(
+        MemberDialog(
             onDismiss = { showDialog = false },
             onConfirm = { n, b, bt, al, notes ->
                 vm.add(n, b, bt, al, notes)
@@ -78,32 +76,4 @@ fun MemberListScreen(
             }
         )
     }
-}
-
-@Composable
-private fun AddMemberDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (String, String, String, String, String) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    var birthdate by remember { mutableStateOf("") }
-    var blood by remember { mutableStateOf("") }
-    var allergies by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("添加成员") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("姓名") })
-                OutlinedTextField(value = birthdate, onValueChange = { birthdate = it }, label = { Text("生日（可空，如 1990-01-01）") })
-                OutlinedTextField(value = blood, onValueChange = { blood = it }, label = { Text("血型（可空）") })
-                OutlinedTextField(value = allergies, onValueChange = { allergies = it }, label = { Text("过敏史（可空）") })
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("备注（可空）") })
-            }
-        },
-        confirmButton = { TextButton(onClick = { onConfirm(name, birthdate, blood, allergies, notes) }) { Text("保存") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
-    )
 }
