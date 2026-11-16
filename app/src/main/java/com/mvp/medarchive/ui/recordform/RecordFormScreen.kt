@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.mvp.medarchive.ui.common.AppTopBar
 import java.io.File
 
 private val TYPES = listOf("病历", "检查单", "处方", "用药", "疫苗", "其他")
@@ -78,12 +79,7 @@ fun RecordFormScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        Surface(tonalElevation = 2.dp) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
-                TextButton(onClick = onBack) { Text("返回") }
-                Text(if (isEdit) "编辑记录" else "添加记录", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
-            }
-        }
+        AppTopBar(title = if (isEdit) "编辑记录" else "添加记录", onBack = onBack)
         Column(
             Modifier
                 .fillMaxSize()

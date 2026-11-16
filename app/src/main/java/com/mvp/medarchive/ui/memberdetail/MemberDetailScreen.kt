@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.mvp.medarchive.ui.common.AppTopBar
 import com.mvp.medarchive.ui.formatEpochDay
 import com.mvp.medarchive.ui.member.MemberDialog
 
@@ -67,19 +68,15 @@ fun MemberDetailScreen(
 
     Scaffold(
         topBar = {
-            Surface(tonalElevation = 2.dp) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onBack) { Text("返回") }
-                    Text(member?.name ?: "档案", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
-                    Spacer(Modifier.weight(1f))
+            AppTopBar(
+                title = member?.name ?: "档案",
+                onBack = onBack,
+                actions = {
                     TextButton(onClick = vm::export, enabled = !exporting) {
                         Text(if (exporting) "导出中…" else "导出 PDF")
                     }
                 }
-            }
+            )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = { member?.let { onAddRecord(it.id) } }) { Text("+ 添加记录") }

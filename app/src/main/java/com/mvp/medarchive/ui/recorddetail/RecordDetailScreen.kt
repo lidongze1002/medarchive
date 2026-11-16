@@ -11,7 +11,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.mvp.medarchive.ui.common.AppTopBar
 import com.mvp.medarchive.ui.formatEpochDay
 import java.io.File
 
@@ -38,14 +43,15 @@ fun RecordDetailScreen(
     val imagePaths by vm.imagePaths.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
-        Surface(tonalElevation = 2.dp) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
-                TextButton(onClick = onBack) { Text("返回") }
-                Text("记录详情", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(8.dp))
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = onEdit) { Text("编辑") }
+        AppTopBar(
+            title = "记录详情",
+            onBack = onBack,
+            actions = {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Filled.Edit, contentDescription = "编辑")
+                }
             }
-        }
+        )
         Column(
             Modifier
                 .fillMaxSize()
