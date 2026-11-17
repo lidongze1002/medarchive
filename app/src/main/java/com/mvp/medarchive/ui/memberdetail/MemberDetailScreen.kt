@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mvp.medarchive.billing.ProDialog
 import com.mvp.medarchive.billing.ProManager
+import com.mvp.medarchive.data.db.MedReminder
 import com.mvp.medarchive.data.db.Member
 import com.mvp.medarchive.data.db.Record
 import com.mvp.medarchive.ui.ageFromBirthdate
@@ -69,6 +70,8 @@ import com.mvp.medarchive.ui.common.RecordCard
 import com.mvp.medarchive.ui.member.MemberDialog
 import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.monthLabel
+import com.mvp.medarchive.ui.reminder.ReminderDialog
+import com.mvp.medarchive.ui.reminder.ReminderSection
 import com.mvp.medarchive.ui.vitals.VitalsCard
 
 private val RECORD_TYPES = listOf("病历", "检查单", "处方", "用药", "疫苗", "其他")
@@ -89,6 +92,7 @@ fun MemberDetailScreen(
 ) {
     val member by vm.member.collectAsStateWithLifecycle()
     val records by vm.records.collectAsStateWithLifecycle()
+    val reminders by vm.reminders.collectAsStateWithLifecycle()
     val exporting by vm.exporting.collectAsStateWithLifecycle()
     val shareUri by vm.shareUri.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
@@ -98,6 +102,21 @@ fun MemberDetailScreen(
     var showSheet by remember { mutableStateOf(false) }
     var pendingDeleteId by remember { mutableStateOf<Long?>(null) }
     var showPro by remember { mutableStateOf(false) }
+    var showReminderDialog by remember { mutableStateOf(false) }
+    var editingReminder by remember { mutableStateOf<MedReminder?>(null) }
+
+    val notificationsLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { }
+    fun askNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                ctx, android.Manifest.permission.POST_NOTIFICATIONS
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationsLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     val titleModifier = member?.let { m ->
         with(sharedTransitionScope) {
@@ -189,6 +208,22 @@ fun MemberDetailScreen(
                 item(key = "vitals") {
                     VitalsCard(records)
                 }
+            }
+
+            item(key = "reminders") {
+                ReminderSection(
+                    reminders = reminders,
+                    onAdd = {
+                        askNotificationPermission()
+                        editingReminder = null
+                        showReminderDialog = true
+                    },
+                    onEdit = { reminder ->
+                        editingReminder = reminder
+                        showReminderDialog = true
+                    },
+                    onToggle = { reminder, enabled -> vm.setReminderEnabled(reminder, enabled) }
+                )
             }
 
             item(key = "section") {
@@ -337,6 +372,23 @@ fun MemberDetailScreen(
     }
     if (showPro) {
         ProDialog(onDismiss = { showPro = false })
+    }
+    if (showReminderDialog) {
+        val editing = editingReminder
+        ReminderDialog(
+            initial = editing,
+            onDismiss = { showReminderDialog = false },
+            onSave = { drug, dosage, times, enabled ->
+                vm.saveReminder(editing, drug, dosage, times, enabled)
+                showReminderDialog = false
+            },
+            onDelete = editing?.let { r ->
+                {
+                    vm.deleteReminder(r)
+                    showReminderDialog = false
+                }
+            }
+        )
     }
 }
 

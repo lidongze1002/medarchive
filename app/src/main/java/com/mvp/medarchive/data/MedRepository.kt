@@ -2,6 +2,7 @@ package com.mvp.medarchive.data
 
 import com.mvp.medarchive.data.db.MedDatabase
 import com.mvp.medarchive.data.db.Member
+import com.mvp.medarchive.data.db.MedReminder
 import com.mvp.medarchive.data.db.Record
 import com.mvp.medarchive.data.db.RecordCount
 import com.mvp.medarchive.data.db.RecordImage
@@ -29,8 +30,24 @@ class MedRepository(
             if (m.avatarPath.isNotBlank()) imageStore.delete(m.avatarPath)
         }
         db.recordDao().byMember(id).forEach { deleteRecord(it.id) }
+        db.medReminderDao().deleteByMember(id)
         db.memberDao().delete(id)
     }
+
+    fun remindersOf(memberId: Long): Flow<List<MedReminder>> =
+        db.medReminderDao().observeByMember(memberId)
+
+    suspend fun reminders(memberId: Long): List<MedReminder> = db.medReminderDao().byMember(memberId)
+
+    suspend fun allEnabledReminders(): List<MedReminder> = db.medReminderDao().allEnabled()
+
+    suspend fun addReminder(r: MedReminder): Long = db.medReminderDao().insert(r)
+
+    suspend fun updateReminder(r: MedReminder) = db.medReminderDao().update(r)
+
+    suspend fun deleteReminder(id: Long) = db.medReminderDao().delete(id)
+
+    suspend fun findReminder(id: Long): MedReminder? = db.medReminderDao().get(id)
 
     fun recordsOf(memberId: Long): Flow<List<Record>> = db.recordDao().observeByMember(memberId)
 

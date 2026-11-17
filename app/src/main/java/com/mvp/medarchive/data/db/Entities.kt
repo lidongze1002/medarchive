@@ -36,3 +36,15 @@ data class RecordImage(
     val path: String,
     val sortOrder: Int = 0
 )
+
+@Entity(tableName = "med_reminders", indices = [Index("memberId")])
+data class MedReminder(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val memberId: Long,
+    val drug: String,
+    val dosage: String = "",
+    /** 每天提醒时间，21:30 逗号分隔 */
+    val times: String = "08:00",
+    val enabled: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis()
+)

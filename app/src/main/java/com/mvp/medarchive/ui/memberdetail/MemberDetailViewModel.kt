@@ -11,7 +11,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.mvp.medarchive.data.MedRepository
 import com.mvp.medarchive.data.db.Member
 import com.mvp.medarchive.data.db.Record
+import com.mvp.medarchive.data.db.MedReminder
 import com.mvp.medarchive.export.PdfContentBuilder
+import com.mvp.medarchive.reminder.ReminderScheduler
 import com.mvp.medarchive.billing.ProManager
 import com.mvp.medarchive.export.PdfExporter
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,9 @@ class MemberDetailViewModel(
     val member: StateFlow<Member?> = _member
 
     val records: StateFlow<List<Record>> = repository.recordsOf(memberId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val reminders: StateFlow<List<MedReminder>> = repository.remindersOf(memberId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _exporting = MutableStateFlow(false)
@@ -94,8 +99,53 @@ class MemberDetailViewModel(
         }
 
     fun deleteMember(onDeleted: () -> Unit) = viewModelScope.launch {
+        val app = getApplication<Application>()
+        repository.reminders(memberId).forEach { ReminderScheduler.cancel(app, it) }
         repository.deleteMember(memberId)
         onDeleted()
+    }
+
+    fun saveReminder(
+        existing: MedReminder?,
+        drug: String,
+        dosage: String,
+        times: List<java.time.LocalTime>,
+        enabled: Boolean
+    ) = viewModelScope.launch {
+        if (drug.isBlank() || times.isEmpty()) return@launch
+        val app = getApplication<Application>()
+        val csv = times.sorted().joinToString(",") { it.toString() }
+        if (existing == null) {
+            val reminder = MedReminder(
+                memberId = memberId,
+                drug = drug.trim(),
+                dosage = dosage.trim(),
+                times = csv,
+                enabled = enabled
+            )
+            val id = repository.addReminder(reminder)
+            ReminderScheduler.schedule(app, reminder.copy(id = id))
+        } else {
+            val updated = existing.copy(
+                drug = drug.trim(),
+                dosage = dosage.trim(),
+                times = csv,
+                enabled = enabled
+            )
+            repository.updateReminder(updated)
+            ReminderScheduler.schedule(app, updated)
+        }
+    }
+
+    fun deleteReminder(reminder: MedReminder) = viewModelScope.launch {
+        ReminderScheduler.cancel(getApplication(), reminder)
+        repository.deleteReminder(reminder.id)
+    }
+
+    fun setReminderEnabled(reminder: MedReminder, enabled: Boolean) = viewModelScope.launch {
+        val updated = reminder.copy(enabled = enabled)
+        repository.updateReminder(updated)
+        ReminderScheduler.schedule(getApplication(), updated)
     }
 
     companion object {
