@@ -42,6 +42,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.mvp.medarchive.billing.ProDialog
+import com.mvp.medarchive.billing.ProManager
 import com.mvp.medarchive.ui.common.AppTopBar
 import java.io.File
 
@@ -58,6 +60,7 @@ fun RecordFormScreen(
     val ctx = LocalContext.current
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showPro by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { vm.load() }
 
@@ -135,8 +138,14 @@ fun RecordFormScreen(
                         Thumb(path) { vm.removeImage(i) }
                     }
                 }
-                OutlinedButton(onClick = { vm.ocrImages() }, enabled = !state.ocrBusy, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (state.ocrBusy) "识别中…" else "识别图片文字")
+                OutlinedButton(
+                    onClick = {
+                        if (ProManager(ctx).isPro()) vm.ocrImages() else showPro = true
+                    },
+                    enabled = !state.ocrBusy,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (state.ocrBusy) "识别中…" else "识别图片文字（Pro）")
                 }
                 val msg = state.ocrMessage
                 if (msg != null) {
@@ -149,6 +158,9 @@ fun RecordFormScreen(
         }
     }
 
+    if (showPro) {
+        ProDialog(onDismiss = { showPro = false })
+    }
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = state.dateEpochDay * 86_400_000L

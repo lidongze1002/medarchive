@@ -15,7 +15,7 @@ import java.io.FileOutputStream
 
 class PdfExporter(private val context: Context) {
 
-    fun export(content: PdfContent, imageResolver: (Long) -> List<Bitmap>): Uri {
+    fun export(content: PdfContent, isPro: Boolean, imageResolver: (Long) -> List<Bitmap>): Uri {
         val doc = PdfDocument()
         val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
 
@@ -23,11 +23,23 @@ class PdfExporter(private val context: Context) {
         var canvas = page.canvas
         var y = 40f
 
+        fun watermark(c: Canvas) {
+            if (isPro) return
+            val p = Paint().apply {
+                color = Color.parseColor("#99AAAAAA")
+                textSize = 10f
+            }
+            c.drawText("由「家庭病历本」免费版生成 · 升级 Pro 可去水印", 40f, 822f, p)
+        }
+
+        watermark(canvas)
+
         fun newPage() {
             doc.finishPage(page)
             page = doc.startPage(pageInfo)
             canvas = page.canvas
             y = 40f
+            watermark(canvas)
         }
 
         fun ensureSpace(needed: Float) {

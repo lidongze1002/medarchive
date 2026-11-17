@@ -31,6 +31,8 @@ class MedRepository(
 
     fun recordsOf(memberId: Long): Flow<List<Record>> = db.recordDao().observeByMember(memberId)
 
+    fun allRecords(): Flow<List<Record>> = db.recordDao().observeAll()
+
     suspend fun recordsList(memberId: Long): List<Record> = db.recordDao().byMember(memberId)
 
     suspend fun record(id: Long): Record? = db.recordDao().get(id)

@@ -1,6 +1,8 @@
 package com.mvp.medarchive.security
 
 import android.content.Context
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -61,13 +64,22 @@ fun LockScreen(onUnlock: () -> Unit) {
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
 
-    Column(
-        Modifier
+    Surface(
+        modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { },
+        color = MaterialTheme.colorScheme.background
     ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
         Icon(
             Icons.Filled.Lock,
             contentDescription = null,
@@ -111,6 +123,7 @@ fun LockScreen(onUnlock: () -> Unit) {
             onClick = { if (lock.verify(pin)) onUnlock() else error = true },
             modifier = Modifier.fillMaxWidth()
         ) { Text("解锁") }
+        }
     }
 }
 

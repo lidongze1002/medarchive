@@ -1,10 +1,13 @@
 package com.mvp.medarchive.ui.memberlist
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.mvp.medarchive.data.BackupManager
 import com.mvp.medarchive.data.MedRepository
 import com.mvp.medarchive.data.db.Member
 import kotlinx.coroutines.flow.SharingStarted
@@ -12,13 +15,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
-import java.time.LocalDate
 
 data class MemberItem(val member: Member, val recordCount: Int)
 
-class MemberListViewModel(private val repository: MedRepository) : ViewModel() {
+class MemberListViewModel(
+    application: Application,
+    private val repository: MedRepository
+) : AndroidViewModel(application) {
 
     val items: StateFlow<List<MemberItem>> = combine(
         repository.members(),
@@ -43,42 +46,15 @@ class MemberListViewModel(private val repository: MedRepository) : ViewModel() {
 
     fun delete(id: Long) = viewModelScope.launch { repository.deleteMember(id) }
 
-    suspend fun buildBackupJson(): String {
-        val members = repository.allMembers()
-        val membersArr = JSONArray()
-        for (m in members) {
-            val memberObj = JSONObject().apply {
-                put("name", m.name)
-                put("birthdate", m.birthdate)
-                put("bloodType", m.bloodType)
-                put("allergies", m.allergies)
-                put("notes", m.notes)
-            }
-            val recordsArr = JSONArray()
-            for (r in repository.recordsList(m.id)) {
-                recordsArr.put(
-                    JSONObject().apply {
-                        put("type", r.type)
-                        put("title", r.title)
-                        put("date", LocalDate.ofEpochDay(r.dateEpochDay).toString())
-                        put("hospital", r.hospital)
-                        put("notes", r.notes)
-                    }
-                )
-            }
-            memberObj.put("records", recordsArr)
-            membersArr.put(memberObj)
-        }
-        return JSONObject().apply {
-            put("app", "medarchive")
-            put("exportedAt", System.currentTimeMillis())
-            put("members", membersArr)
-        }.toString(2)
-    }
+    suspend fun exportBackup(): Uri =
+        BackupManager(getApplication(), repository).exportZip()
+
+    suspend fun importBackup(uri: Uri): Int =
+        BackupManager(getApplication(), repository).importZip(uri)
 
     companion object {
-        fun factory(repository: MedRepository): ViewModelProvider.Factory = viewModelFactory {
-            initializer { MemberListViewModel(repository) }
+        fun factory(app: Application, repository: MedRepository): ViewModelProvider.Factory = viewModelFactory {
+            initializer { MemberListViewModel(app, repository) }
         }
     }
 }

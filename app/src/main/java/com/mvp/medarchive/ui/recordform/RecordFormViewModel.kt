@@ -112,15 +112,49 @@ class RecordFormViewModel(
             }
             sb.toString().trim()
         }
-        _state.value = if (text.isBlank()) {
-            _state.value.copy(ocrBusy = false, ocrMessage = "未识别到文字")
-        } else {
-            _state.value.copy(
-                ocrBusy = false,
-                ocrMessage = "已识别 ${text.length} 字，已填入备注",
-                notes = (_state.value.notes + "\n" + text).trim()
-            )
+        if (text.isBlank()) {
+            _state.value = _state.value.copy(ocrBusy = false, ocrMessage = "未识别到文字")
+            return@launch
         }
+        val parsed = parseStructured(text)
+        val s = _state.value
+        val newDate = parsed.dateEpochDay ?: s.dateEpochDay
+        val newHospital = if (s.hospital.isBlank() && parsed.hospital != null) parsed.hospital else s.hospital
+        val filled = buildList {
+            if (parsed.dateEpochDay != null) add("日期")
+            if (s.hospital.isBlank() && parsed.hospital != null) add("医院")
+        }
+        _state.value = s.copy(
+            ocrBusy = false,
+            ocrMessage = if (filled.isEmpty()) "已识别 ${text.length} 字，已填入备注"
+            else "已识别 ${text.length} 字，并自动填入：${filled.joinToString("、")}",
+            notes = (s.notes + "\n" + text).trim(),
+            dateEpochDay = newDate,
+            hospital = newHospital
+        )
+    }
+
+    private data class ParsedOcr(val dateEpochDay: Long?, val hospital: String?)
+
+    private fun parseStructured(text: String): ParsedOcr {
+        val datePattern = Regex("""(\d{4})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})""")
+        val date = datePattern.find(text)?.let {
+            runCatching {
+                LocalDate.of(
+                    it.groupValues[1].toInt(),
+                    it.groupValues[2].toInt(),
+                    it.groupValues[3].toInt()
+                ).toEpochDay()
+            }.getOrNull()
+        }
+        val hospitalLine = text.lines()
+            .map { it.trim() }
+            .firstOrNull { it.contains("医院") || it.contains("卫生院") || it.contains("诊所") }
+        val hospital = hospitalLine
+            ?.substringBefore("医院")?.let { it + "医院" }
+            ?.takeIf { it.length in 3..30 }
+            ?: hospitalLine?.takeIf { it.length in 3..30 }
+        return ParsedOcr(date, hospital)
     }
 
     fun save(onSaved: () -> Unit) = viewModelScope.launch {

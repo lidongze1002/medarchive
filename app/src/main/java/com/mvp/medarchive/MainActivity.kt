@@ -13,17 +13,22 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mvp.medarchive.security.LockManager
 import com.mvp.medarchive.security.LockScreen
+import com.mvp.medarchive.ui.allrecords.AllRecordsScreen
+import com.mvp.medarchive.ui.allrecords.AllRecordsViewModel
 import com.mvp.medarchive.ui.memberdetail.MemberDetailScreen
 import com.mvp.medarchive.ui.memberdetail.MemberDetailViewModel
 import com.mvp.medarchive.ui.memberlist.MemberListScreen
@@ -39,6 +44,7 @@ sealed interface Screen {
     data class Detail(val memberId: Long) : Screen
     data class RecordForm(val memberId: Long, val recordId: Long? = null) : Screen
     data class RecordDetail(val recordId: Long, val memberId: Long) : Screen
+    data object AllRecords : Screen
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -59,14 +65,12 @@ class MainActivity : ComponentActivity() {
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
 
-                if (!unlocked) {
-                    LockScreen { unlocked = true }
-                } else {
+                Box(Modifier.fillMaxSize()) {
                 val container = (application as MedArchiveApp).container
                 var stack by remember { mutableStateOf(listOf<Screen>(Screen.List)) }
                 val current = stack.last()
 
-                BackHandler { if (stack.size > 1) stack = stack.dropLast(1) }
+                BackHandler(enabled = unlocked) { if (stack.size > 1) stack = stack.dropLast(1) }
 
                 SharedTransitionLayout {
                     val sharedScope = this
@@ -81,10 +85,18 @@ class MainActivity : ComponentActivity() {
                         val animScope = this
                         when (screen) {
                             Screen.List -> MemberListScreen(
-                                vm = viewModel(factory = MemberListViewModel.factory(container.repository)),
+                                vm = viewModel(factory = MemberListViewModel.factory(application, container.repository)),
                                 onOpen = { id -> stack = stack + Screen.Detail(id) },
+                                onOpenAllRecords = { stack = stack + Screen.AllRecords },
                                 sharedTransitionScope = sharedScope,
                                 animatedVisibilityScope = animScope
+                            )
+                            Screen.AllRecords -> AllRecordsScreen(
+                                vm = viewModel(factory = AllRecordsViewModel.factory(container.repository)),
+                                onBack = { stack = stack.dropLast(1) },
+                                onOpenRecord = { recordId, memberId ->
+                                    stack = stack + Screen.RecordDetail(recordId, memberId)
+                                }
                             )
                             is Screen.Detail -> MemberDetailScreen(
                                 vm = viewModel(
@@ -118,6 +130,9 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                }
+                if (!unlocked) {
+                    LockScreen { unlocked = true }
                 }
                 }
             }

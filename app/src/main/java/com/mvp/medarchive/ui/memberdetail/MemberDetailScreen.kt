@@ -53,6 +53,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mvp.medarchive.billing.ProDialog
+import com.mvp.medarchive.billing.ProManager
 import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
 import com.mvp.medarchive.ui.common.StatusChip
@@ -80,6 +82,7 @@ fun MemberDetailScreen(
     var showDelete by remember { mutableStateOf(false) }
     var showSheet by remember { mutableStateOf(false) }
     var pendingDeleteId by remember { mutableStateOf<Long?>(null) }
+    var showPro by remember { mutableStateOf(false) }
 
     val titleModifier = member?.let { m ->
         with(sharedTransitionScope) {
@@ -122,7 +125,13 @@ fun MemberDetailScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { member?.let { onAddRecord(it.id) } },
+                onClick = {
+                    if (!ProManager(ctx).isPro() && records.size >= ProManager.FREE_RECORD_LIMIT_PER_MEMBER) {
+                        showPro = true
+                    } else {
+                        member?.let { onAddRecord(it.id) }
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) { Text("+ 添加记录") }
@@ -311,6 +320,9 @@ fun MemberDetailScreen(
             },
             dismissButton = { TextButton(onClick = { pendingDeleteId = null }) { Text("取消") } }
         )
+    }
+    if (showPro) {
+        ProDialog(onDismiss = { showPro = false })
     }
 }
 

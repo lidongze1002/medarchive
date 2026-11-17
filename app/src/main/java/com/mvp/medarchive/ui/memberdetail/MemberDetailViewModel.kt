@@ -12,6 +12,7 @@ import com.mvp.medarchive.data.MedRepository
 import com.mvp.medarchive.data.db.Member
 import com.mvp.medarchive.data.db.Record
 import com.mvp.medarchive.export.PdfContentBuilder
+import com.mvp.medarchive.billing.ProManager
 import com.mvp.medarchive.export.PdfExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +58,7 @@ class MemberDetailViewModel(
                     }.getOrNull()
                 }
             }
-            _shareUri.value = exporter.export(content) { rid -> imgs[rid] ?: emptyList() }
+            _shareUri.value = exporter.export(content, ProManager(getApplication()).isPro()) { rid -> imgs[rid] ?: emptyList() }
         }
         _exporting.value = false
     }

@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,7 +50,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -62,42 +62,55 @@ import com.mvp.medarchive.ui.common.SkeletonCard
 import com.mvp.medarchive.ui.common.SearchBar
 import com.mvp.medarchive.ui.common.StatusChip
 import com.mvp.medarchive.ui.common.staggeredAppear
+import com.mvp.medarchive.billing.ProDialog
+import com.mvp.medarchive.billing.ProManager
 import com.mvp.medarchive.security.LockSettingsDialog
 import com.mvp.medarchive.ui.member.MemberDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MemberListScreen(
     vm: MemberListViewModel,
     onOpen: (Long) -> Unit,
+    onOpenAllRecords: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val items by vm.items.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var showLock by remember { mutableStateOf(false) }
+    var showPro by remember { mutableStateOf(false) }
+    var showDataSheet by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
     val totalRecords = items.sumOf { it.recordCount }
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) scope.launch {
+            val n = runCatching { vm.importBackup(uri) }.getOrElse { -1 }
+            android.widget.Toast.makeText(
+                ctx,
+                if (n >= 0) "已导入 $n 条记录" else "导入失败：文件格式不正确",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     val doExport: () -> Unit = {
         scope.launch {
-            val json = vm.buildBackupJson()
-            val file = File(ctx.cacheDir, "medarchive_backup.json")
-            withContext(Dispatchers.IO) { file.writeText(json) }
-            val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+            val uri = vm.exportBackup()
             val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/json"
+                type = "application/zip"
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            ctx.startActivity(Intent.createChooser(intent, "导出病历数据"))
+            ctx.startActivity(Intent.createChooser(intent, "导出备份"))
         }
     }
     var query by remember { mutableStateOf("") }
@@ -115,7 +128,13 @@ fun MemberListScreen(
         containerColor = Color.Transparent,
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { showDialog = true },
+                onClick = {
+                    if (!ProManager(ctx).isPro() && items.size >= ProManager.FREE_MEMBER_LIMIT) {
+                        showPro = true
+                    } else {
+                        showDialog = true
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
@@ -152,11 +171,23 @@ fun MemberListScreen(
                             color = Color.White.copy(alpha = 0.85f),
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "查看全部记录 ›",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.White.copy(alpha = 0.18f))
+                                .clickable(onClick = onOpenAllRecords)
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
                     }
                     IconButton(onClick = { showLock = true }) {
                         Icon(Icons.Filled.Lock, contentDescription = "应用锁", tint = Color.White)
                     }
-                    IconButton(onClick = doExport) {
+                    IconButton(onClick = { showDataSheet = true }) {
                         Icon(Icons.Filled.Share, contentDescription = "导出数据", tint = Color.White)
                     }
                 }
@@ -293,5 +324,43 @@ fun MemberListScreen(
     }
     if (showLock) {
         LockSettingsDialog(onDismiss = { showLock = false })
+    }
+    if (showPro) {
+        ProDialog(onDismiss = { showPro = false })
+    }
+    if (showDataSheet) {
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { showDataSheet = false }) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                Text(
+                    "数据备份",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+                Text(
+                    "导出备份（含照片）",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showDataSheet = false
+                            doExport()
+                        }
+                        .padding(20.dp)
+                )
+                Text(
+                    "导入备份（Pro）",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showDataSheet = false
+                            if (ProManager(ctx).isPro()) {
+                                importLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                            } else {
+                                showPro = true
+                            }
+                        }
+                        .padding(20.dp)
+                )
+            }
+        }
     }
 }

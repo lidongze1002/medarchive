@@ -16,6 +16,9 @@ interface RecordDao {
     @Query("SELECT * FROM records WHERE memberId = :id ORDER BY dateEpochDay DESC, createdAt DESC")
     suspend fun byMember(id: Long): List<Record>
 
+    @Query("SELECT * FROM records ORDER BY dateEpochDay DESC, createdAt DESC")
+    fun observeAll(): Flow<List<Record>>
+
     @Query("SELECT * FROM records WHERE id = :id")
     suspend fun get(id: Long): Record?
 

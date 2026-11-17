@@ -60,5 +60,7 @@ dependencies {
 
     implementation("com.google.mlkit:text-recognition-chinese:16.0.0")
 
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
+
     testImplementation("junit:junit:4.13.2")
 }
