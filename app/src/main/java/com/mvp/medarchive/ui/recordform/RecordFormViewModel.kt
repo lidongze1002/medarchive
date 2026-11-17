@@ -14,6 +14,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import com.mvp.medarchive.data.MedRepository
 import com.mvp.medarchive.data.db.Record
+import com.mvp.medarchive.scan.ImageEnhancer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -132,6 +133,38 @@ class RecordFormViewModel(
             notes = (s.notes + "\n" + text).trim(),
             dateEpochDay = newDate,
             hospital = newHospital
+        )
+    }
+
+    fun addImageBytes(bytes: ByteArray) = viewModelScope.launch(Dispatchers.IO) {
+        val name = repository.imageStore.save(bytes)
+        val path = repository.imageStore.file(name).absolutePath
+        _state.value = _state.value.copy(images = _state.value.images + path)
+    }
+
+    /** 已拍/已导入的照片一键转成扫描件（去色 + 提对比度）。 */
+    fun enhanceImages() = viewModelScope.launch(Dispatchers.IO) {
+        val paths = _state.value.images
+        if (paths.isEmpty()) return@launch
+        _state.value = _state.value.copy(ocrBusy = true, ocrMessage = "正在增强成扫描件…")
+        val result = paths.map { p ->
+            val old = File(p)
+            val bytes = runCatching { ImageEnhancer.enhanceFile(old) }.getOrNull()
+            if (bytes == null) {
+                p
+            } else {
+                runCatching {
+                    val name = repository.imageStore.save(bytes)
+                    val newFile = repository.imageStore.file(name)
+                    if (newFile.absolutePath != old.absolutePath) old.delete()
+                    newFile.absolutePath
+                }.getOrDefault(p)
+            }
+        }
+        _state.value = _state.value.copy(
+            images = result,
+            ocrBusy = false,
+            ocrMessage = "已增强 ${result.size} 张，可点缩略图查看"
         )
     }
 

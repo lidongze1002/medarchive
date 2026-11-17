@@ -1,6 +1,6 @@
 package com.mvp.medarchive.ui.recordform
 
-import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,6 +44,7 @@ import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.mvp.medarchive.billing.ProDialog
 import com.mvp.medarchive.billing.ProManager
+import com.mvp.medarchive.scan.ScanCropScreen
 import com.mvp.medarchive.ui.common.AppTopBar
 import java.io.File
 
@@ -59,6 +60,9 @@ fun RecordFormScreen(
     val state by vm.state.collectAsState()
     val ctx = LocalContext.current
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingCameraFile by remember { mutableStateOf<File?>(null) }
+    var pendingScan by remember { mutableStateOf(false) }
+    var scanPath by remember { mutableStateOf<String?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showPro by remember { mutableStateOf(false) }
 
@@ -72,14 +76,38 @@ fun RecordFormScreen(
         ActivityResultContracts.TakePicture()
     ) { ok ->
         val uri = pendingCameraUri
-        if (ok && uri != null) vm.addImageUris(listOf(uri))
+        val file = pendingCameraFile
+        if (ok && uri != null) {
+            if (pendingScan && file != null) {
+                scanPath = file.absolutePath
+            } else {
+                vm.addImageUris(listOf(uri))
+            }
+        }
+        pendingScan = false
     }
 
-    fun launchCamera() {
+    fun launchCamera(scan: Boolean = false) {
         val f = File(ctx.cacheDir, "cam_${System.currentTimeMillis()}.jpg")
         val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", f)
         pendingCameraUri = uri
+        pendingCameraFile = f
+        pendingScan = scan
         com.mvp.medarchive.security.ExternalUi.launch { takePicture.launch(uri) }
+    }
+
+    // 扫描校正页（拍照后进入）
+    val cropPath = scanPath
+    if (cropPath != null) {
+        ScanCropScreen(
+            imagePath = cropPath,
+            onCancel = { scanPath = null },
+            onDone = { bytes ->
+                vm.addImageBytes(bytes)
+                scanPath = null
+            }
+        )
+        return
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -128,7 +156,11 @@ fun RecordFormScreen(
                 Text(state.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
             Text("图片（点击缩略图可移除）", style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(onClick = { launchCamera(scan = true) }) { Text("扫描报告") }
                 OutlinedButton(onClick = { launchCamera() }) { Text("拍照") }
                 OutlinedButton(onClick = {
                     com.mvp.medarchive.security.ExternalUi.launch { pickImages.launch("image/*") }
@@ -139,6 +171,13 @@ fun RecordFormScreen(
                     state.images.forEachIndexed { i, path ->
                         Thumb(path) { vm.removeImage(i) }
                     }
+                }
+                OutlinedButton(
+                    onClick = { vm.enhanceImages() },
+                    enabled = !state.ocrBusy,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (state.ocrBusy) "处理中…" else "增强成扫描件（去底色、提清晰度）")
                 }
                 OutlinedButton(
                     onClick = {
