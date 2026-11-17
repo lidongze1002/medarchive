@@ -32,7 +32,14 @@ object ReminderNotifier {
         manager.createNotificationChannel(channel)
     }
 
-    fun show(context: Context, id: Long, drug: String, dosage: String, time: String) {
+    fun show(
+        context: Context,
+        id: Long,
+        memberId: Long,
+        drug: String,
+        dosage: String,
+        time: String
+    ) {
         ensureChannel(context)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -49,6 +56,14 @@ object ReminderNotifier {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val takenAction = actionPending(
+            context, ReminderActionReceiver.ACTION_TAKEN, id, memberId, drug, dosage, time,
+            (id * 10 + 1).toInt()
+        )
+        val snoozeAction = actionPending(
+            context, ReminderActionReceiver.ACTION_SNOOZE, id, memberId, drug, dosage, time,
+            (id * 10 + 2).toInt()
+        )
         val line = listOfNotNull(
             dosage.takeIf { it.isNotBlank() },
             "该吃药了 · $time"
@@ -62,9 +77,37 @@ object ReminderNotifier {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(pending)
+            .addAction(0, "已服用", takenAction)
+            .addAction(0, "10 分钟后再提醒", snoozeAction)
             .build()
         runCatching {
             NotificationManagerCompat.from(context).notify(id.toInt(), notification)
         }
+    }
+
+    private fun actionPending(
+        context: Context,
+        action: String,
+        id: Long,
+        memberId: Long,
+        drug: String,
+        dosage: String,
+        time: String,
+        requestCode: Int
+    ): PendingIntent {
+        val intent = Intent(context, ReminderActionReceiver::class.java).apply {
+            this.action = action
+            putExtra(ReminderReceiver.EXTRA_ID, id)
+            putExtra(ReminderReceiver.EXTRA_MEMBER_ID, memberId)
+            putExtra(ReminderReceiver.EXTRA_DRUG, drug)
+            putExtra(ReminderReceiver.EXTRA_DOSAGE, dosage)
+            putExtra(ReminderReceiver.EXTRA_TIME, time)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 }

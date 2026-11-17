@@ -13,11 +13,12 @@ class ReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getLongExtra(EXTRA_ID, -1L)
+        val memberId = intent.getLongExtra(EXTRA_MEMBER_ID, -1L)
         val drug = intent.getStringExtra(EXTRA_DRUG) ?: "用药"
         val dosage = intent.getStringExtra(EXTRA_DOSAGE).orEmpty()
         val time = intent.getStringExtra(EXTRA_TIME) ?: ""
 
-        ReminderNotifier.show(context, id, drug, dosage, time)
+        ReminderNotifier.show(context, id, memberId, drug, dosage, time)
 
         if (id <= 0) return
         val app = context.applicationContext as? MedArchiveApp ?: return
@@ -34,6 +35,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_ID = "reminder_id"
+        const val EXTRA_MEMBER_ID = "member_id"
         const val EXTRA_DRUG = "drug"
         const val EXTRA_DOSAGE = "dosage"
         const val EXTRA_TIME = "time"

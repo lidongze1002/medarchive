@@ -48,3 +48,23 @@ data class MedReminder(
     val enabled: Boolean = true,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+/** 打卡记录：某天某个时间点是否已服用。 */
+@Entity(
+    tableName = "med_doses",
+    indices = [
+        Index(value = ["reminderId", "dateEpochDay", "time"], unique = true),
+        Index("memberId")
+    ]
+)
+data class MedDose(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val reminderId: Long,
+    val memberId: Long,
+    val dateEpochDay: Long,
+    /** HH:mm */
+    val time: String,
+    /** taken / skipped */
+    val status: String = "taken",
+    val takenAt: Long = System.currentTimeMillis()
+)

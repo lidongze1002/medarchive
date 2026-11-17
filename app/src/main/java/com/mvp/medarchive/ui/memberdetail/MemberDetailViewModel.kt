@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.mvp.medarchive.data.MedRepository
 import com.mvp.medarchive.data.db.Member
 import com.mvp.medarchive.data.db.Record
+import com.mvp.medarchive.data.db.MedDose
 import com.mvp.medarchive.data.db.MedReminder
 import com.mvp.medarchive.export.PdfContentBuilder
 import com.mvp.medarchive.reminder.ReminderScheduler
@@ -36,6 +37,11 @@ class MemberDetailViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val reminders: StateFlow<List<MedReminder>> = repository.remindersOf(memberId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** 最近 7 天的打卡记录（含今天） */
+    val doses: StateFlow<List<MedDose>> = repository
+        .dosesSince(memberId, java.time.LocalDate.now().minusDays(6).toEpochDay())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _exporting = MutableStateFlow(false)
@@ -114,7 +120,8 @@ class MemberDetailViewModel(
     ) = viewModelScope.launch {
         if (drug.isBlank() || times.isEmpty()) return@launch
         val app = getApplication<Application>()
-        val csv = times.sorted().joinToString(",") { it.toString() }
+        val csv = times.sorted()
+            .joinToString(",") { String.format("%02d:%02d", it.hour, it.minute) }
         if (existing == null) {
             val reminder = MedReminder(
                 memberId = memberId,
@@ -146,6 +153,18 @@ class MemberDetailViewModel(
         val updated = reminder.copy(enabled = enabled)
         repository.updateReminder(updated)
         ReminderScheduler.schedule(getApplication(), updated)
+    }
+
+    /** 点时间胶囊打卡 / 取消打卡（今天）。 */
+    fun toggleDose(reminder: MedReminder, time: String) = viewModelScope.launch {
+        val day = java.time.LocalDate.now().toEpochDay()
+        val taken = repository.todayDoses(memberId, day)
+            .any { it.reminderId == reminder.id && it.time == time && it.status == "taken" }
+        if (taken) {
+            repository.unmarkDose(reminder.id, day, time)
+        } else {
+            repository.markDoseTaken(reminder.id, memberId, time, day)
+        }
     }
 
     companion object {

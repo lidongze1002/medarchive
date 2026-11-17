@@ -29,6 +29,42 @@ object ReminderScheduler {
         reminders.forEach { schedule(context, it) }
     }
 
+    /** 通知里点「稍后提醒」：10 分钟后再响一次，不改动每天的固定时间。 */
+    fun snooze(
+        context: Context,
+        reminderId: Long,
+        memberId: Long,
+        drug: String,
+        dosage: String,
+        time: String,
+        minutes: Int = 10
+    ) {
+        val manager = context.getSystemService(AlarmManager::class.java) ?: return
+        val intent = Intent(context, ReminderReceiver::class.java).apply {
+            putExtra(ReminderReceiver.EXTRA_ID, reminderId)
+            putExtra(ReminderReceiver.EXTRA_MEMBER_ID, memberId)
+            putExtra(ReminderReceiver.EXTRA_DRUG, drug)
+            putExtra(ReminderReceiver.EXTRA_DOSAGE, dosage)
+            putExtra(ReminderReceiver.EXTRA_TIME, time)
+        }
+        val pi = PendingIntent.getBroadcast(
+            context,
+            (reminderId * 100 + 9000).toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val trigger = System.currentTimeMillis() + minutes * 60_000L
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !manager.canScheduleExactAlarms()) {
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi)
+            } else {
+                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi)
+            }
+        } catch (e: SecurityException) {
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi)
+        }
+    }
+
     fun cancel(context: Context, reminder: MedReminder) {
         val manager = context.getSystemService(AlarmManager::class.java) ?: return
         parseTimes(reminder.times).forEachIndexed { index, time ->
@@ -66,6 +102,7 @@ object ReminderScheduler {
     ): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             putExtra(ReminderReceiver.EXTRA_ID, reminderId)
+            putExtra(ReminderReceiver.EXTRA_MEMBER_ID, reminder.memberId)
             putExtra(ReminderReceiver.EXTRA_DRUG, reminder.drug)
             putExtra(ReminderReceiver.EXTRA_DOSAGE, reminder.dosage)
             putExtra(ReminderReceiver.EXTRA_TIME, time.toString())

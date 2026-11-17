@@ -24,24 +24,38 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mvp.medarchive.data.db.MedDose
 import com.mvp.medarchive.data.db.MedReminder
 import com.mvp.medarchive.reminder.ReminderScheduler
 import com.mvp.medarchive.ui.common.AppCard
+import java.time.LocalDate
 
 @Composable
 fun ReminderSection(
     reminders: List<MedReminder>,
+    doses: List<MedDose>,
     onAdd: () -> Unit,
     onEdit: (MedReminder) -> Unit,
-    onToggle: (MedReminder, Boolean) -> Unit
+    onToggle: (MedReminder, Boolean) -> Unit,
+    onToggleDose: (MedReminder, String) -> Unit
 ) {
     val ctx = LocalContext.current
+    val today = LocalDate.now()
+    val takenToday = remember(doses, today) {
+        doses.filter { it.status == "taken" && it.dateEpochDay == today.toEpochDay() }
+            .map { it.reminderId to it.time }
+            .toSet()
+    }
+
     AppCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -55,46 +69,60 @@ fun ReminderSection(
 
         if (reminders.isEmpty()) {
             Text(
-                "添加后每天按设定的时间提醒吃药，重启手机也会保留。",
+                "添加后每天按设定的时间提醒吃药；点时间胶囊可以打卡。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
             Spacer(Modifier.height(4.dp))
             reminders.forEachIndexed { index, reminder ->
-                Row(
+                Column(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { onEdit(reminder) }
-                        .padding(vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(vertical = 10.dp)
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            reminder.drug,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        if (reminder.dosage.isNotBlank()) {
-                            Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
                             Text(
-                                reminder.dosage,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                reminder.drug,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
                             )
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            ReminderScheduler.parseTimes(reminder.times).forEach { t ->
-                                TimeBadge(formatTime(t))
+                            if (reminder.dosage.isNotBlank()) {
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    reminder.dosage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
+                        Spacer(Modifier.width(8.dp))
+                        Switch(
+                            checked = reminder.enabled,
+                            onCheckedChange = { onToggle(reminder, it) }
+                        )
                     }
-                    Spacer(Modifier.width(8.dp))
-                    Switch(
-                        checked = reminder.enabled,
-                        onCheckedChange = { onToggle(reminder, it) }
+
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ReminderScheduler.parseTimes(reminder.times).forEach { t ->
+                            val key = formatTime(t)
+                            DoseChip(
+                                time = key,
+                                taken = takenToday.contains(reminder.id to key),
+                                onClick = { onToggleDose(reminder, key) }
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        adherenceFor(reminder, doses, today).text + " · 点时间打卡",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 if (index != reminders.lastIndex) {
@@ -110,17 +138,32 @@ fun ReminderSection(
 }
 
 @Composable
-private fun TimeBadge(text: String) {
+private fun DoseChip(time: String, taken: Boolean, onClick: () -> Unit) {
+    val container = if (taken) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    val content = if (taken) {
+        MaterialTheme.colorScheme.onPrimary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Box(
         Modifier
             .clip(RoundedCornerShape(50))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .clickable(onClick = onClick)
+            .background(container)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .semantics {
+                contentDescription = if (taken) "已服用 $time，点按取消" else "标记 $time 已服用"
+            }
     ) {
         Text(
-            text,
+            if (taken) "✓ $time" else time,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer
+            fontWeight = if (taken) FontWeight.SemiBold else FontWeight.Medium,
+            color = content
         )
     }
 }

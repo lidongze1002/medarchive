@@ -7,6 +7,7 @@ import com.mvp.medarchive.data.MedRepository
 import com.mvp.medarchive.data.db.MedDatabase
 import com.mvp.medarchive.data.db.MIGRATION_1_2
 import com.mvp.medarchive.data.db.MIGRATION_2_3
+import com.mvp.medarchive.data.db.MIGRATION_3_4
 
 class AppContainer(context: Context) {
     private val app = context.applicationContext
@@ -15,7 +16,7 @@ class AppContainer(context: Context) {
         app,
         MedDatabase::class.java,
         "med.db"
-    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
 
     val repository = MedRepository(database, imageStore)
 }

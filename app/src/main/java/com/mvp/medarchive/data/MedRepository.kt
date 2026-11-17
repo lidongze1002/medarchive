@@ -2,6 +2,7 @@ package com.mvp.medarchive.data
 
 import com.mvp.medarchive.data.db.MedDatabase
 import com.mvp.medarchive.data.db.Member
+import com.mvp.medarchive.data.db.MedDose
 import com.mvp.medarchive.data.db.MedReminder
 import com.mvp.medarchive.data.db.Record
 import com.mvp.medarchive.data.db.RecordCount
@@ -31,6 +32,7 @@ class MedRepository(
         }
         db.recordDao().byMember(id).forEach { deleteRecord(it.id) }
         db.medReminderDao().deleteByMember(id)
+        db.medDoseDao().deleteByMember(id)
         db.memberDao().delete(id)
     }
 
@@ -45,9 +47,34 @@ class MedRepository(
 
     suspend fun updateReminder(r: MedReminder) = db.medReminderDao().update(r)
 
-    suspend fun deleteReminder(id: Long) = db.medReminderDao().delete(id)
+    suspend fun deleteReminder(id: Long) {
+        db.medReminderDao().delete(id)
+        db.medDoseDao().deleteByReminder(id)
+    }
 
     suspend fun findReminder(id: Long): MedReminder? = db.medReminderDao().get(id)
+
+    fun dosesSince(memberId: Long, fromDay: Long): Flow<List<MedDose>> =
+        db.medDoseDao().observeRange(memberId, fromDay, Long.MAX_VALUE)
+
+    suspend fun todayDoses(memberId: Long, day: Long): List<MedDose> =
+        db.medDoseDao().byDay(memberId, day)
+
+    suspend fun markDoseTaken(reminderId: Long, memberId: Long, time: String, day: Long) {
+        db.medDoseDao().upsert(
+            MedDose(
+                reminderId = reminderId,
+                memberId = memberId,
+                dateEpochDay = day,
+                time = time,
+                status = "taken"
+            )
+        )
+    }
+
+    suspend fun unmarkDose(reminderId: Long, day: Long, time: String) {
+        db.medDoseDao().deleteOne(reminderId, day, time)
+    }
 
     fun recordsOf(memberId: Long): Flow<List<Record>> = db.recordDao().observeByMember(memberId)
 

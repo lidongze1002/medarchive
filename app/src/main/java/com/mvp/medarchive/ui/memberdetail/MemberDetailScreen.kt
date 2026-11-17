@@ -93,6 +93,7 @@ fun MemberDetailScreen(
     val member by vm.member.collectAsStateWithLifecycle()
     val records by vm.records.collectAsStateWithLifecycle()
     val reminders by vm.reminders.collectAsStateWithLifecycle()
+    val doses by vm.doses.collectAsStateWithLifecycle()
     val exporting by vm.exporting.collectAsStateWithLifecycle()
     val shareUri by vm.shareUri.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
@@ -213,6 +214,7 @@ fun MemberDetailScreen(
             item(key = "reminders") {
                 ReminderSection(
                     reminders = reminders,
+                    doses = doses,
                     onAdd = {
                         askNotificationPermission()
                         editingReminder = null
@@ -222,7 +224,8 @@ fun MemberDetailScreen(
                         editingReminder = reminder
                         showReminderDialog = true
                     },
-                    onToggle = { reminder, enabled -> vm.setReminderEnabled(reminder, enabled) }
+                    onToggle = { reminder, enabled -> vm.setReminderEnabled(reminder, enabled) },
+                    onToggleDose = { reminder, time -> vm.toggleDose(reminder, time) }
                 )
             }
 
