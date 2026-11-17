@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -61,6 +62,7 @@ import com.mvp.medarchive.ui.common.SkeletonCard
 import com.mvp.medarchive.ui.common.SearchBar
 import com.mvp.medarchive.ui.common.StatusChip
 import com.mvp.medarchive.ui.common.staggeredAppear
+import com.mvp.medarchive.security.LockSettingsDialog
 import com.mvp.medarchive.ui.member.MemberDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -78,6 +80,7 @@ fun MemberListScreen(
 ) {
     val items by vm.items.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
+    var showLock by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -149,6 +152,9 @@ fun MemberListScreen(
                             color = Color.White.copy(alpha = 0.85f),
                             style = MaterialTheme.typography.bodyMedium
                         )
+                    }
+                    IconButton(onClick = { showLock = true }) {
+                        Icon(Icons.Filled.Lock, contentDescription = "应用锁", tint = Color.White)
                     }
                     IconButton(onClick = doExport) {
                         Icon(Icons.Filled.Share, contentDescription = "导出数据", tint = Color.White)
@@ -284,5 +290,8 @@ fun MemberListScreen(
                 showDialog = false
             }
         )
+    }
+    if (showLock) {
+        LockSettingsDialog(onDismiss = { showLock = false })
     }
 }

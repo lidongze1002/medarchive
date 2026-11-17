@@ -79,6 +79,7 @@ fun MemberDetailScreen(
     var showEdit by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
     var showSheet by remember { mutableStateOf(false) }
+    var pendingDeleteId by remember { mutableStateOf<Long?>(null) }
 
     val titleModifier = member?.let { m ->
         with(sharedTransitionScope) {
@@ -170,9 +171,9 @@ fun MemberDetailScreen(
                             val dismissState = rememberSwipeToDismissBoxState(
                                 confirmValueChange = { v ->
                                     if (v == SwipeToDismissBoxValue.EndToStart) {
-                                        vm.deleteRecord(r.id)
-                                        true
-                                    } else false
+                                        pendingDeleteId = r.id
+                                    }
+                                    false
                                 }
                             )
                             SwipeToDismissBox(
@@ -296,6 +297,20 @@ fun MemberDetailScreen(
                 }
             }
         }
+    }
+    if (pendingDeleteId != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDeleteId = null },
+            title = { Text("删除记录") },
+            text = { Text("确定删除这条记录？照片也会一并删除。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDeleteId?.let { vm.deleteRecord(it) }
+                    pendingDeleteId = null
+                }) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { pendingDeleteId = null }) { Text("取消") } }
+        )
     }
 }
 
