@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.mvp.medarchive.data.ImageStore
 import com.mvp.medarchive.data.MedRepository
 import com.mvp.medarchive.data.db.MedDatabase
+import com.mvp.medarchive.data.db.MIGRATION_1_2
 
 class AppContainer(context: Context) {
     private val app = context.applicationContext
@@ -13,7 +14,7 @@ class AppContainer(context: Context) {
         app,
         MedDatabase::class.java,
         "med.db"
-    ).build()
+    ).addMigrations(MIGRATION_1_2).build()
 
     val repository = MedRepository(database, imageStore)
 }

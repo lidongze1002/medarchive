@@ -67,16 +67,27 @@ class MemberDetailViewModel(
 
     fun deleteRecord(id: Long) = viewModelScope.launch { repository.deleteRecord(id) }
 
-    fun updateMember(name: String, birthdate: String, bloodType: String, allergies: String, notes: String) =
+    fun updateMember(
+        name: String,
+        birthdate: String,
+        bloodType: String,
+        allergies: String,
+        notes: String,
+        avatarPath: String
+    ) =
         viewModelScope.launch {
             val m = _member.value ?: return@launch
+            if (m.avatarPath.isNotBlank() && m.avatarPath != avatarPath) {
+                repository.imageStore.delete(m.avatarPath)
+            }
             repository.updateMember(
                 m.copy(
                     name = name.trim(),
                     birthdate = birthdate.trim(),
                     bloodType = bloodType.trim(),
                     allergies = allergies.trim(),
-                    notes = notes.trim()
+                    notes = notes.trim(),
+                    avatarPath = avatarPath
                 )
             )
             _member.value = repository.member(memberId)

@@ -57,6 +57,7 @@ import com.mvp.medarchive.billing.ProDialog
 import com.mvp.medarchive.billing.ProManager
 import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
+import com.mvp.medarchive.ui.common.Avatar
 import com.mvp.medarchive.ui.common.StatusChip
 import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.formatEpochDay
@@ -145,6 +146,29 @@ fun MemberDetailScreen(
                 .padding(16.dp)
         ) {
             member?.let { m ->
+                AppCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Avatar(m.name, m.avatarPath, 64.dp)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                m.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (m.notes.isNotBlank()) {
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    m.notes,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
                 val hasInfo = m.birthdate.isNotBlank() || m.bloodType.isNotBlank() || m.allergies.isNotBlank()
                 if (hasInfo) {
                     AppCard {
@@ -242,8 +266,8 @@ fun MemberDetailScreen(
         MemberDialog(
             initial = member,
             onDismiss = { showEdit = false },
-            onConfirm = { n, b, bt, al, notes ->
-                vm.updateMember(n, b, bt, al, notes)
+            onConfirm = { n, b, bt, al, notes, avatar ->
+                vm.updateMember(n, b, bt, al, notes, avatar)
                 showEdit = false
             }
         )

@@ -1,5 +1,6 @@
 package com.mvp.medarchive.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -12,6 +13,7 @@ data class Member(
     val bloodType: String = "",
     val allergies: String = "",
     val notes: String = "",
+    @ColumnInfo(defaultValue = "") val avatarPath: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )
 

@@ -25,6 +25,9 @@ class MedRepository(
     }
 
     suspend fun deleteMember(id: Long) {
+        db.memberDao().get(id)?.let { m ->
+            if (m.avatarPath.isNotBlank()) imageStore.delete(m.avatarPath)
+        }
         db.recordDao().byMember(id).forEach { deleteRecord(it.id) }
         db.memberDao().delete(id)
     }

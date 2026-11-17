@@ -256,7 +256,7 @@ fun MemberListScreen(
                                 onClick = { onOpen(item.member.id) }
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Avatar(item.member.name)
+                                    Avatar(item.member.name, item.member.avatarPath)
                                     Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {
                                         val nameModifier = with(sharedTransitionScope) {
@@ -316,8 +316,8 @@ fun MemberListScreen(
     if (showDialog) {
         MemberDialog(
             onDismiss = { showDialog = false },
-            onConfirm = { n, b, bt, al, notes ->
-                vm.add(n, b, bt, al, notes)
+            onConfirm = { n, b, bt, al, notes, avatar ->
+                vm.add(n, b, bt, al, notes, avatar)
                 showDialog = false
             }
         )

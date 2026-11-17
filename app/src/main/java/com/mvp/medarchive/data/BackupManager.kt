@@ -33,6 +33,7 @@ class BackupManager(
                 put("bloodType", m.bloodType)
                 put("allergies", m.allergies)
                 put("notes", m.notes)
+                put("avatar", m.avatarPath)
             }
             val recsArr = JSONArray()
             for (r in repository.recordsList(m.id)) {
@@ -58,9 +59,19 @@ class BackupManager(
             zos.putNextEntry(ZipEntry(JSON_NAME))
             zos.write(root.toString().toByteArray(Charsets.UTF_8))
             zos.closeEntry()
+            val added = mutableSetOf<String>()
             for (m in members) {
+                if (m.avatarPath.isNotBlank() && added.add(m.avatarPath)) {
+                    val f = repository.imageStore.file(m.avatarPath)
+                    if (f.exists()) {
+                        zos.putNextEntry(ZipEntry("media/${m.avatarPath}"))
+                        zos.write(f.readBytes())
+                        zos.closeEntry()
+                    }
+                }
                 for (r in repository.recordsList(m.id)) {
                     for (p in repository.imagePaths(r.id)) {
+                        if (!added.add(p)) continue
                         val f = repository.imageStore.file(p)
                         if (f.exists()) {
                             zos.putNextEntry(ZipEntry("media/$p"))
@@ -102,13 +113,15 @@ class BackupManager(
         val members = root.optJSONArray("members") ?: return 0
         for (i in 0 until members.length()) {
             val mo = members.getJSONObject(i)
+            val avatar = mo.optString("avatar")
             val memberId = repository.addMember(
                 Member(
                     name = mo.optString("name"),
                     birthdate = mo.optString("birthdate"),
                     bloodType = mo.optString("bloodType"),
                     allergies = mo.optString("allergies"),
-                    notes = mo.optString("notes")
+                    notes = mo.optString("notes"),
+                    avatarPath = mediaMap[avatar] ?: ""
                 )
             )
             val recs = mo.optJSONArray("records") ?: continue

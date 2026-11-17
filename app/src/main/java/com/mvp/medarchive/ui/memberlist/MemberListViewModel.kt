@@ -31,7 +31,14 @@ class MemberListViewModel(
         members.map { MemberItem(it, countMap[it.id] ?: 0) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun add(name: String, birthdate: String, bloodType: String, allergies: String, notes: String) =
+    fun add(
+        name: String,
+        birthdate: String,
+        bloodType: String,
+        allergies: String,
+        notes: String,
+        avatarPath: String
+    ) =
         viewModelScope.launch {
             repository.addMember(
                 Member(
@@ -39,7 +46,8 @@ class MemberListViewModel(
                     birthdate = birthdate.trim(),
                     bloodType = bloodType.trim(),
                     allergies = allergies.trim(),
-                    notes = notes.trim()
+                    notes = notes.trim(),
+                    avatarPath = avatarPath
                 )
             )
         }
