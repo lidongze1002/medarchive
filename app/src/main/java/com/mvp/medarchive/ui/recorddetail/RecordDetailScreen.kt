@@ -26,6 +26,7 @@ import coil.compose.AsyncImage
 import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
 import com.mvp.medarchive.ui.common.StatusChip
+import com.mvp.medarchive.ui.common.ZoomableImage
 import com.mvp.medarchive.ui.formatEpochDay
 import java.io.File
 
@@ -92,10 +93,9 @@ fun RecordDetailScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 imagePaths.forEach { path ->
-                    AsyncImage(
-                        model = File(path),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ZoomableImage(
+                        path = path,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
             }
