@@ -1,5 +1,6 @@
 package com.mvp.medarchive.ui.memberlist
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -21,9 +22,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -41,9 +44,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -57,8 +62,11 @@ import com.mvp.medarchive.ui.common.SearchBar
 import com.mvp.medarchive.ui.common.StatusChip
 import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.member.MemberDialog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -73,7 +81,22 @@ fun MemberListScreen(
     var loading by remember { mutableStateOf(true) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val ctx = LocalContext.current
     val totalRecords = items.sumOf { it.recordCount }
+    val doExport: () -> Unit = {
+        scope.launch {
+            val json = vm.buildBackupJson()
+            val file = File(ctx.cacheDir, "medarchive_backup.json")
+            withContext(Dispatchers.IO) { file.writeText(json) }
+            val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            ctx.startActivity(Intent.createChooser(intent, "导出病历数据"))
+        }
+    }
     var query by remember { mutableStateOf("") }
     val filtered = if (query.isBlank()) items else items.filter {
         it.member.name.contains(query, ignoreCase = true) ||
@@ -109,21 +132,26 @@ fun MemberListScreen(
                             listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
                         )
                     )
-                    .padding(22.dp)
+                    .padding(horizontal = 22.dp, vertical = 16.dp)
             ) {
-                Column {
-                    Text(
-                        "家庭病历本",
-                        color = Color.White,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "${items.size} 位成员 · ${totalRecords} 条记录",
-                        color = Color.White.copy(alpha = 0.85f),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "家庭病历本",
+                            color = Color.White,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "${items.size} 位成员 · ${totalRecords} 条记录",
+                            color = Color.White.copy(alpha = 0.85f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    IconButton(onClick = doExport) {
+                        Icon(Icons.Filled.Share, contentDescription = "导出数据", tint = Color.White)
+                    }
                 }
             }
             Box(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {

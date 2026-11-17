@@ -11,6 +11,9 @@ interface MemberDao {
     @Query("SELECT * FROM members ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<Member>>
 
+    @Query("SELECT * FROM members ORDER BY createdAt")
+    suspend fun getAll(): List<Member>
+
     @Query("SELECT * FROM members WHERE id = :id")
     suspend fun get(id: Long): Member?
 

@@ -14,6 +14,8 @@ class MedRepository(
 
     fun members(): Flow<List<Member>> = db.memberDao().observeAll()
 
+    suspend fun allMembers(): List<Member> = db.memberDao().getAll()
+
     suspend fun member(id: Long): Member? = db.memberDao().get(id)
 
     suspend fun addMember(m: Member): Long = db.memberDao().insert(m)

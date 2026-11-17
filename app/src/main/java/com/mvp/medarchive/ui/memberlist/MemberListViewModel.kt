@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
+import java.time.LocalDate
 
 data class MemberItem(val member: Member, val recordCount: Int)
 
@@ -39,6 +42,39 @@ class MemberListViewModel(private val repository: MedRepository) : ViewModel() {
         }
 
     fun delete(id: Long) = viewModelScope.launch { repository.deleteMember(id) }
+
+    suspend fun buildBackupJson(): String {
+        val members = repository.allMembers()
+        val membersArr = JSONArray()
+        for (m in members) {
+            val memberObj = JSONObject().apply {
+                put("name", m.name)
+                put("birthdate", m.birthdate)
+                put("bloodType", m.bloodType)
+                put("allergies", m.allergies)
+                put("notes", m.notes)
+            }
+            val recordsArr = JSONArray()
+            for (r in repository.recordsList(m.id)) {
+                recordsArr.put(
+                    JSONObject().apply {
+                        put("type", r.type)
+                        put("title", r.title)
+                        put("date", LocalDate.ofEpochDay(r.dateEpochDay).toString())
+                        put("hospital", r.hospital)
+                        put("notes", r.notes)
+                    }
+                )
+            }
+            memberObj.put("records", recordsArr)
+            membersArr.put(memberObj)
+        }
+        return JSONObject().apply {
+            put("app", "medarchive")
+            put("exportedAt", System.currentTimeMillis())
+            put("members", membersArr)
+        }.toString(2)
+    }
 
     companion object {
         fun factory(repository: MedRepository): ViewModelProvider.Factory = viewModelFactory {
