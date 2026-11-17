@@ -17,10 +17,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,10 +32,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mvp.medarchive.data.db.Record
+import com.mvp.medarchive.health.HealthConnectSource
 import com.mvp.medarchive.ui.common.AppCard
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 data class VitalMetric(val key: String, val label: String, val unit: String)
@@ -92,8 +98,47 @@ fun extractVitals(records: List<Record>): List<VitalSeries> {
 
 @Composable
 fun VitalsCard(records: List<Record>) {
-    val series = remember(records) { extractVitals(records) }
-    var selectedKey by remember(series) { mutableStateOf(series.firstOrNull()?.metric?.key) }
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val source = remember { HealthConnectSource(ctx) }
+    var healthSeries by remember { mutableStateOf<List<VitalSeries>>(emptyList()) }
+    var syncing by remember { mutableStateOf(false) }
+    var healthMessage by remember { mutableStateOf<String?>(null) }
+
+    suspend fun loadHealth() {
+        syncing = true
+        runCatching { source.readLast(30) }
+            .onSuccess { list ->
+                healthSeries = list
+                healthMessage = if (list.isEmpty()) "已连接健康 App，但最近 30 天没有读到数据" else null
+            }
+            .onFailure { e ->
+                healthMessage = if (e is SecurityException) "没有读取健康数据的权限" else "读取健康数据失败"
+            }
+        syncing = false
+    }
+
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.health.connect.client.PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        if (granted.containsAll(source.permissions)) {
+            scope.launch { loadHealth() }
+        } else {
+            syncing = false
+            healthMessage = "未获得健康数据权限"
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (source.isAvailable()) {
+            val granted = source.grantedPermissions()
+            if (granted.containsAll(source.permissions)) loadHealth()
+        }
+    }
+
+    val baseSeries = remember(records) { extractVitals(records) }
+    val series = remember(baseSeries, healthSeries) { baseSeries + healthSeries }
+    var selectedKey by remember { mutableStateOf<String?>(null) }
     val current = series.firstOrNull { it.metric.key == selectedKey } ?: series.firstOrNull()
 
     AppCard {
@@ -104,19 +149,46 @@ fun VitalsCard(records: List<Record>) {
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.weight(1f))
-            if (current != null) {
-                Text(
-                    "共 ${current.points.size} 次",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            TextButton(
+                onClick = {
+                    if (!source.isAvailable()) {
+                        healthMessage = "需要「健康连接」：Android 14+ 系统自带，旧系统需单独安装"
+                        return@TextButton
+                    }
+                    scope.launch {
+                        val granted = source.grantedPermissions()
+                        if (granted.containsAll(source.permissions)) {
+                            loadHealth()
+                        } else {
+                            syncing = true
+                            permissionLauncher.launch(source.permissions)
+                        }
+                    }
+                },
+                enabled = !syncing
+            ) { Text(if (syncing) "同步中…" else "同步手环") }
+        }
+
+        if (current != null) {
+            Text(
+                "共 ${current.points.size} 次 · 点上方指标切换",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        healthMessage?.let { message ->
+            Spacer(Modifier.height(2.dp))
+            Text(
+                message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
 
         if (current == null) {
             Spacer(Modifier.height(6.dp))
             Text(
-                "在备注里写「血压 135/85」「血糖 5.6」或「血红蛋白 130」，这里会自动生成趋势。",
+                "在备注里写「血压 135/85」「血糖 5.6」或「血红蛋白 130」会自动生成趋势；也可以点右上角「同步手环」读取体脂秤/手环数据。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -190,6 +262,14 @@ fun VitalsCard(records: List<Record>) {
                 }
                 Text(
                     shortDate(shown.last().epochDay),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (HealthConnectSource.SOURCE_KEYS.contains(current.metric.key)) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "数据来自健康 App（体脂秤/手环），最近 30 天",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

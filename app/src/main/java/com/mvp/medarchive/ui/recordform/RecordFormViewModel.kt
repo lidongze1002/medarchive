@@ -92,8 +92,8 @@ class RecordFormViewModel(
 
     fun ocrImages(auto: Boolean = false) = viewModelScope.launch { runOcr(auto) }
 
-    private suspend fun runOcr(auto: Boolean) {
-        val paths = _state.value.images
+    private suspend fun runOcr(auto: Boolean, onlyPath: String? = null) {
+        val paths = onlyPath?.let { listOf(it) } ?: _state.value.images
         if (paths.isEmpty()) {
             _state.value = _state.value.copy(ocrMessage = "请先添加图片")
             return
@@ -122,31 +122,43 @@ class RecordFormViewModel(
         }
         val parsed = OcrParser.parse(text)
         val s = _state.value
+        val alreadyInNotes = s.notes.contains(text)
         val filled = buildList {
             if (parsed.dateEpochDay != null) add("日期")
             if (s.hospital.isBlank() && parsed.hospital != null) add("医院")
             if (s.title.isBlank() && parsed.title != null) add("标题")
         }
+        val newNotes = if (alreadyInNotes) s.notes else (s.notes + "\n" + text).trim()
         _state.value = s.copy(
             ocrBusy = false,
-            ocrMessage = if (filled.isEmpty()) {
-                "已识别 ${text.length} 字，已填入备注"
-            } else {
-                "${if (auto) "扫描完成，" else ""}已识别 ${text.length} 字，自动填入：${filled.joinToString("、")}"
+            ocrMessage = when {
+                alreadyInNotes && filled.isEmpty() -> "识别完成，内容已在备注中"
+                filled.isEmpty() -> "已识别 ${text.length} 字，已填入备注"
+                else -> "${if (auto) "扫描完成，" else ""}已识别 ${text.length} 字，自动填入：${filled.joinToString("、")}"
             },
-            notes = (s.notes + "\n" + text).trim(),
+            notes = newNotes,
             title = if (s.title.isBlank()) parsed.title ?: s.title else s.title,
             dateEpochDay = parsed.dateEpochDay ?: s.dateEpochDay,
             hospital = if (s.hospital.isBlank()) parsed.hospital ?: s.hospital else s.hospital
         )
     }
 
-    /** 扫描完成的图片：入库，并按需自动识别填表（Pro）。 */
+    fun addImageFromCamera(file: File) = viewModelScope.launch(Dispatchers.IO) {
+        runCatching {
+            val bytes = file.readBytes()
+            val name = repository.imageStore.save(bytes)
+            val path = repository.imageStore.file(name).absolutePath
+            _state.value = _state.value.copy(images = _state.value.images + path)
+        }
+        file.delete()
+    }
+
+    /** 扫描完成的图片：入库；自动识别只识别这一张，避免备注重复。 */
     fun addScannedImage(bytes: ByteArray, autoOcr: Boolean) = viewModelScope.launch(Dispatchers.IO) {
-        val name = repository.imageStore.save(bytes)
+        val name = repository.imageStore.saveRaw(bytes)
         val path = repository.imageStore.file(name).absolutePath
         _state.value = _state.value.copy(images = _state.value.images + path)
-        if (autoOcr) runOcr(auto = true)
+        if (autoOcr) runOcr(auto = true, onlyPath = path)
     }
 
     /** 已拍/已导入的照片一键转成扫描件（去色 + 提对比度）。 */
@@ -161,7 +173,7 @@ class RecordFormViewModel(
                 p
             } else {
                 runCatching {
-                    val name = repository.imageStore.save(bytes)
+                    val name = repository.imageStore.saveRaw(bytes)
                     val newFile = repository.imageStore.file(name)
                     if (newFile.absolutePath != old.absolutePath) old.delete()
                     newFile.absolutePath

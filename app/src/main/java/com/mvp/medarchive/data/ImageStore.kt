@@ -15,8 +15,13 @@ class ImageStore(context: Context) {
     /** 入库统一压缩 + 纠正方向，避免大图占空间、列表解码卡顿。 */
     fun save(bytes: ByteArray): String {
         val normalized = runCatching { compress(bytes) }.getOrNull() ?: bytes
-        val name = "img_${System.currentTimeMillis()}_${normalized.contentHashCode()}.jpg"
-        File(dir, name).writeBytes(normalized)
+        return saveRaw(normalized)
+    }
+
+    /** 已经处理/压缩过的图片直接落盘，避免二次压缩掉画质（扫描件、增强件）。 */
+    fun saveRaw(bytes: ByteArray): String {
+        val name = "img_${System.currentTimeMillis()}_${bytes.contentHashCode()}.jpg"
+        File(dir, name).writeBytes(bytes)
         return name
     }
 

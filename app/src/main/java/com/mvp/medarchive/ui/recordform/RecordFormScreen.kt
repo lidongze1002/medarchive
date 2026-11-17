@@ -63,6 +63,7 @@ fun RecordFormScreen(
     var pendingCameraFile by remember { mutableStateOf<File?>(null) }
     var pendingScan by remember { mutableStateOf(false) }
     var scanPath by remember { mutableStateOf<String?>(null) }
+    var showContinueScan by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showPro by remember { mutableStateOf(false) }
 
@@ -80,9 +81,13 @@ fun RecordFormScreen(
         if (ok && uri != null) {
             if (pendingScan && file != null) {
                 scanPath = file.absolutePath
+            } else if (file != null) {
+                vm.addImageFromCamera(file)
             } else {
                 vm.addImageUris(listOf(uri))
             }
+        } else {
+            file?.delete()
         }
         pendingScan = false
     }
@@ -93,7 +98,12 @@ fun RecordFormScreen(
         pendingCameraUri = uri
         pendingCameraFile = f
         pendingScan = scan
-        com.mvp.medarchive.security.ExternalUi.launch { takePicture.launch(uri) }
+        try {
+            com.mvp.medarchive.security.ExternalUi.launch { takePicture.launch(uri) }
+        } catch (e: Exception) {
+            f.delete()
+            android.widget.Toast.makeText(ctx, "没有可用的相机应用", android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
 
     // 扫描校正页（拍照后进入）
@@ -101,11 +111,17 @@ fun RecordFormScreen(
     if (cropPath != null) {
         ScanCropScreen(
             imagePath = cropPath,
-            onCancel = { scanPath = null },
+            onCancel = {
+                scanPath = null
+                pendingCameraFile?.delete()
+                pendingCameraFile = null
+            },
             onDone = { bytes ->
                 val auto = ProManager(ctx).isPro()
                 vm.addScannedImage(bytes, autoOcr = auto)
                 scanPath = null
+                pendingCameraFile?.delete()
+                pendingCameraFile = null
                 if (auto) {
                     android.widget.Toast.makeText(
                         ctx,
@@ -113,6 +129,7 @@ fun RecordFormScreen(
                         android.widget.Toast.LENGTH_SHORT
                     ).show()
                 }
+                showContinueScan = true
             }
         )
         return
@@ -163,38 +180,64 @@ fun RecordFormScreen(
             if (state.error != null) {
                 Text(state.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
-            Text("图片（点击缩略图可移除）", style = MaterialTheme.typography.titleSmall)
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(onClick = { launchCamera(scan = true) }) { Text("扫描报告") }
-                OutlinedButton(onClick = { launchCamera() }) { Text("拍照") }
-                OutlinedButton(onClick = {
-                    com.mvp.medarchive.security.ExternalUi.launch { pickImages.launch("image/*") }
-                }) { Text("从相册选择") }
-            }
-            if (state.images.isNotEmpty()) {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("报告图片", style = MaterialTheme.typography.titleSmall)
+            if (state.images.isEmpty()) {
+                Text(
+                    "扫描会自动找边、拉正并增强，纸质报告拍出来更清楚。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     state.images.forEachIndexed { i, path ->
                         Thumb(path) { vm.removeImage(i) }
                     }
                 }
+                Text(
+                    "共 ${state.images.size} 张，点缩略图可移除",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { launchCamera(scan = true) },
+                    modifier = Modifier.weight(1f)
+                ) { Text("扫描") }
                 OutlinedButton(
-                    onClick = { vm.enhanceImages() },
-                    enabled = !state.ocrBusy,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (state.ocrBusy) "处理中…" else "增强成扫描件（去底色、提清晰度）")
-                }
+                    onClick = { launchCamera() },
+                    modifier = Modifier.weight(1f)
+                ) { Text("拍照") }
                 OutlinedButton(
                     onClick = {
-                        if (ProManager(ctx).isPro()) vm.ocrImages() else showPro = true
+                        com.mvp.medarchive.security.ExternalUi.launch { pickImages.launch("image/*") }
                     },
-                    enabled = !state.ocrBusy,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.weight(1f)
+                ) { Text("相册") }
+            }
+            if (state.images.isNotEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(if (state.ocrBusy) "识别中…" else "识别图片文字（Pro）")
+                    OutlinedButton(
+                        onClick = { vm.enhanceImages() },
+                        enabled = !state.ocrBusy,
+                        modifier = Modifier.weight(1f)
+                    ) { Text("增强") }
+                    OutlinedButton(
+                        onClick = {
+                            if (ProManager(ctx).isPro()) vm.ocrImages() else showPro = true
+                        },
+                        enabled = !state.ocrBusy,
+                        modifier = Modifier.weight(1f)
+                    ) { Text(if (state.ocrBusy) "识别中…" else "识别文字") }
                 }
                 val msg = state.ocrMessage
                 if (msg != null) {
@@ -209,6 +252,22 @@ fun RecordFormScreen(
 
     if (showPro) {
         ProDialog(onDismiss = { showPro = false })
+    }
+    if (showContinueScan) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showContinueScan = false },
+            title = { Text("要接着扫描下一页吗？") },
+            text = { Text("这一页已加入记录。多页报告可以连续扫描，最后一起保存。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showContinueScan = false
+                    launchCamera(scan = true)
+                }) { Text("继续扫描") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showContinueScan = false }) { Text("完成") }
+            }
+        )
     }
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(

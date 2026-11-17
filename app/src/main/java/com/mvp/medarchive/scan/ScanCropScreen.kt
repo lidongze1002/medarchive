@@ -2,6 +2,7 @@ package com.mvp.medarchive.scan
 
 import android.graphics.Bitmap
 import android.graphics.PointF
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -67,6 +68,8 @@ fun ScanCropScreen(
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var dragging by remember { mutableStateOf(-1) }
     var processing by remember { mutableStateOf(false) }
+
+    BackHandler { onCancel() }
 
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         Row(
@@ -142,10 +145,15 @@ fun ScanCropScreen(
                                     val dy = drag.y / rect.height()
                                     corners = corners.toMutableList().also { list ->
                                         val c = list[index]
-                                        list[index] = PointF(
-                                            (c.x + dx).coerceIn(0f, 1f),
-                                            (c.y + dy).coerceIn(0f, 1f)
-                                        )
+                                        val nx = (c.x + dx).coerceIn(0f, 1f)
+                                        val ny = (c.y + dy).coerceIn(0f, 1f)
+                                        // 每个角限制在自己的半区，避免拖过头形成交叉四边形
+                                        list[index] = when (index) {
+                                            0 -> PointF(nx.coerceAtMost(0.49f), ny.coerceAtMost(0.49f))
+                                            1 -> PointF(nx.coerceAtLeast(0.51f), ny.coerceAtMost(0.49f))
+                                            2 -> PointF(nx.coerceAtLeast(0.51f), ny.coerceAtLeast(0.51f))
+                                            else -> PointF(nx.coerceAtMost(0.49f), ny.coerceAtLeast(0.51f))
+                                        }
                                     }
                                 }
                             }

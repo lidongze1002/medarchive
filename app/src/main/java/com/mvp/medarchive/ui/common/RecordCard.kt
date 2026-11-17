@@ -39,7 +39,12 @@ fun RecordCard(
     modifier: Modifier = Modifier,
     memberName: String? = null
 ) {
-    AppCard(modifier = modifier, onClick = onClick) {
+    AppCard(
+        modifier = modifier,
+        onClick = onClick,
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+        pressedColor = MaterialTheme.colorScheme.primaryContainer
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TypeBadge(record.type)
             Spacer(Modifier.width(12.dp))

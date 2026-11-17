@@ -1,7 +1,9 @@
 package com.mvp.medarchive.ui.common
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
@@ -19,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 
@@ -26,6 +29,8 @@ import androidx.compose.ui.unit.dp
 fun AppCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    pressedColor: Color = containerColor,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -34,6 +39,11 @@ fun AppCard(
         targetValue = if (pressed) 0.97f else 1f,
         animationSpec = spring(dampingRatio = 0.5f, stiffness = 800f),
         label = "cardScale"
+    )
+    val background by animateColorAsState(
+        targetValue = if (pressed) pressedColor else containerColor,
+        animationSpec = tween(durationMillis = 120),
+        label = "cardBackground"
     )
     val base = modifier
         .fillMaxWidth()
@@ -50,8 +60,8 @@ fun AppCard(
             )
         } else base,
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = background),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (pressed) 0.dp else 2.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(Modifier.padding(18.dp), content = content)
