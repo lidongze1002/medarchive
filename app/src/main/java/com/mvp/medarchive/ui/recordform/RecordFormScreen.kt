@@ -103,8 +103,16 @@ fun RecordFormScreen(
             imagePath = cropPath,
             onCancel = { scanPath = null },
             onDone = { bytes ->
-                vm.addImageBytes(bytes)
+                val auto = ProManager(ctx).isPro()
+                vm.addScannedImage(bytes, autoOcr = auto)
                 scanPath = null
+                if (auto) {
+                    android.widget.Toast.makeText(
+                        ctx,
+                        "扫描完成，正在识别报告内容…",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         )
         return

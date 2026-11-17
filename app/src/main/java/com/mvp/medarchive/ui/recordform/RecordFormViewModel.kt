@@ -90,13 +90,15 @@ class RecordFormViewModel(
         _state.value = _state.value.copy(images = imgs)
     }
 
-    fun ocrImages() = viewModelScope.launch {
+    fun ocrImages(auto: Boolean = false) = viewModelScope.launch { runOcr(auto) }
+
+    private suspend fun runOcr(auto: Boolean) {
         val paths = _state.value.images
         if (paths.isEmpty()) {
             _state.value = _state.value.copy(ocrMessage = "请先添加图片")
-            return@launch
+            return
         }
-        _state.value = _state.value.copy(ocrBusy = true, ocrMessage = null)
+        _state.value = _state.value.copy(ocrBusy = true, ocrMessage = if (auto) "正在自动识别…" else null)
         val text = withContext(Dispatchers.IO) {
             val recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
             val sb = StringBuilder()
@@ -115,31 +117,36 @@ class RecordFormViewModel(
             sb.toString().trim()
         }
         if (text.isBlank()) {
-            _state.value = _state.value.copy(ocrBusy = false, ocrMessage = "未识别到文字")
-            return@launch
+            _state.value = _state.value.copy(ocrBusy = false, ocrMessage = "未识别到文字，可手动填写")
+            return
         }
-        val parsed = parseStructured(text)
+        val parsed = OcrParser.parse(text)
         val s = _state.value
-        val newDate = parsed.dateEpochDay ?: s.dateEpochDay
-        val newHospital = if (s.hospital.isBlank() && parsed.hospital != null) parsed.hospital else s.hospital
         val filled = buildList {
             if (parsed.dateEpochDay != null) add("日期")
             if (s.hospital.isBlank() && parsed.hospital != null) add("医院")
+            if (s.title.isBlank() && parsed.title != null) add("标题")
         }
         _state.value = s.copy(
             ocrBusy = false,
-            ocrMessage = if (filled.isEmpty()) "已识别 ${text.length} 字，已填入备注"
-            else "已识别 ${text.length} 字，并自动填入：${filled.joinToString("、")}",
+            ocrMessage = if (filled.isEmpty()) {
+                "已识别 ${text.length} 字，已填入备注"
+            } else {
+                "${if (auto) "扫描完成，" else ""}已识别 ${text.length} 字，自动填入：${filled.joinToString("、")}"
+            },
             notes = (s.notes + "\n" + text).trim(),
-            dateEpochDay = newDate,
-            hospital = newHospital
+            title = if (s.title.isBlank()) parsed.title ?: s.title else s.title,
+            dateEpochDay = parsed.dateEpochDay ?: s.dateEpochDay,
+            hospital = if (s.hospital.isBlank()) parsed.hospital ?: s.hospital else s.hospital
         )
     }
 
-    fun addImageBytes(bytes: ByteArray) = viewModelScope.launch(Dispatchers.IO) {
+    /** 扫描完成的图片：入库，并按需自动识别填表（Pro）。 */
+    fun addScannedImage(bytes: ByteArray, autoOcr: Boolean) = viewModelScope.launch(Dispatchers.IO) {
         val name = repository.imageStore.save(bytes)
         val path = repository.imageStore.file(name).absolutePath
         _state.value = _state.value.copy(images = _state.value.images + path)
+        if (autoOcr) runOcr(auto = true)
     }
 
     /** 已拍/已导入的照片一键转成扫描件（去色 + 提对比度）。 */
@@ -168,8 +175,6 @@ class RecordFormViewModel(
         )
     }
 
-    private data class ParsedOcr(val dateEpochDay: Long?, val hospital: String?)
-
     /** 大图按 2000px 采样解码，避免 OCR 时 OOM。 */
     private fun decodeSampled(path: String, maxSide: Int = 2000): android.graphics.Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -180,27 +185,6 @@ class RecordFormViewModel(
             sample *= 2
         }
         return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
-    }
-
-    private fun parseStructured(text: String): ParsedOcr {
-        val datePattern = Regex("""(\d{4})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})""")
-        val date = datePattern.find(text)?.let {
-            runCatching {
-                LocalDate.of(
-                    it.groupValues[1].toInt(),
-                    it.groupValues[2].toInt(),
-                    it.groupValues[3].toInt()
-                ).toEpochDay()
-            }.getOrNull()
-        }
-        val hospitalLine = text.lines()
-            .map { it.trim() }
-            .firstOrNull { it.contains("医院") || it.contains("卫生院") || it.contains("诊所") }
-        val hospital = hospitalLine
-            ?.substringBefore("医院")?.let { it + "医院" }
-            ?.takeIf { it.length in 3..30 }
-            ?: hospitalLine?.takeIf { it.length in 3..30 }
-        return ParsedOcr(date, hospital)
     }
 
     fun save(onSaved: () -> Unit) = viewModelScope.launch {
