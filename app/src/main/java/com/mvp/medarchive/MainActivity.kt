@@ -37,6 +37,7 @@ import com.mvp.medarchive.ui.recorddetail.RecordDetailScreen
 import com.mvp.medarchive.ui.recorddetail.RecordDetailViewModel
 import com.mvp.medarchive.ui.recordform.RecordFormScreen
 import com.mvp.medarchive.ui.recordform.RecordFormViewModel
+import com.mvp.medarchive.ui.theme.DisplayPrefs
 import com.mvp.medarchive.ui.theme.MedArchiveTheme
 
 sealed interface Screen {
@@ -51,9 +52,10 @@ sealed interface Screen {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DisplayPrefs.load(this)
         enableEdgeToEdge()
         setContent {
-            MedArchiveTheme {
+            MedArchiveTheme(fontScale = DisplayPrefs.fontScale()) {
                 val lock = remember { LockManager(this@MainActivity) }
                 var unlocked by remember { mutableStateOf(!lock.isEnabled()) }
                 val lifecycleOwner = LocalLifecycleOwner.current

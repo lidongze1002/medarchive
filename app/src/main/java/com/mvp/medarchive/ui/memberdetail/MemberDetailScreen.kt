@@ -69,6 +69,7 @@ import com.mvp.medarchive.ui.common.RecordCard
 import com.mvp.medarchive.ui.member.MemberDialog
 import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.monthLabel
+import com.mvp.medarchive.ui.vitals.VitalsCard
 
 private val RECORD_TYPES = listOf("病历", "检查单", "处方", "用药", "疫苗", "其他")
 
@@ -181,6 +182,12 @@ fun MemberDetailScreen(
                     item(key = "info") {
                         InfoCard(m)
                     }
+                }
+            }
+
+            if (records.isNotEmpty()) {
+                item(key = "vitals") {
+                    VitalsCard(records)
                 }
             }
 

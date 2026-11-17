@@ -69,6 +69,7 @@ import com.mvp.medarchive.billing.ProDialog
 import com.mvp.medarchive.billing.ProManager
 import com.mvp.medarchive.security.LockSettingsDialog
 import com.mvp.medarchive.ui.member.MemberDialog
+import com.mvp.medarchive.ui.theme.DisplayPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -364,13 +365,36 @@ fun MemberListScreen(
         ProDialog(onDismiss = { showPro = false })
     }
     if (showDataSheet) {
+        val largeText = DisplayPrefs.largeText
         androidx.compose.material3.ModalBottomSheet(onDismissRequest = { showDataSheet = false }) {
             Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
                 Text(
-                    "数据备份",
+                    "设置与备份",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            DisplayPrefs.setLargeText(ctx, !largeText)
+                        }
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("大字号", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "字更大、行距更宽，方便长辈看",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = largeText,
+                        onCheckedChange = { DisplayPrefs.setLargeText(ctx, it) }
+                    )
+                }
                 Text(
                     "导出备份（含照片）",
                     modifier = Modifier

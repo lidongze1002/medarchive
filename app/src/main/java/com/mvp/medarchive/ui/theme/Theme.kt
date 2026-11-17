@@ -4,11 +4,15 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF0E9384),
@@ -64,12 +68,40 @@ private val AppShapes = Shapes(
 @Composable
 fun MedArchiveTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    fontScale: Float = 1f,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
         shapes = AppShapes,
-        typography = AppTypography,
+        typography = if (fontScale == 1f) AppTypography else scaledTypography(fontScale),
         content = content
     )
 }
+
+private fun TextUnit.scaledBy(factor: Float): TextUnit =
+    if (isSpecified) this * factor else this
+
+private fun TextStyle.scaledBy(factor: Float): TextStyle = copy(
+    fontSize = fontSize.scaledBy(factor),
+    lineHeight = lineHeight.scaledBy(factor),
+    letterSpacing = letterSpacing.scaledBy(factor)
+)
+
+private fun scaledTypography(factor: Float): Typography = Typography(
+    displayLarge = AppTypography.displayLarge.scaledBy(factor),
+    displayMedium = AppTypography.displayMedium.scaledBy(factor),
+    displaySmall = AppTypography.displaySmall.scaledBy(factor),
+    headlineLarge = AppTypography.headlineLarge.scaledBy(factor),
+    headlineMedium = AppTypography.headlineMedium.scaledBy(factor),
+    headlineSmall = AppTypography.headlineSmall.scaledBy(factor),
+    titleLarge = AppTypography.titleLarge.scaledBy(factor),
+    titleMedium = AppTypography.titleMedium.scaledBy(factor),
+    titleSmall = AppTypography.titleSmall.scaledBy(factor),
+    bodyLarge = AppTypography.bodyLarge.scaledBy(factor),
+    bodyMedium = AppTypography.bodyMedium.scaledBy(factor),
+    bodySmall = AppTypography.bodySmall.scaledBy(factor),
+    labelLarge = AppTypography.labelLarge.scaledBy(factor),
+    labelMedium = AppTypography.labelMedium.scaledBy(factor),
+    labelSmall = AppTypography.labelSmall.scaledBy(factor)
+)
