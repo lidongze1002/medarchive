@@ -1,47 +1,64 @@
 package com.mvp.medarchive.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF00695C),
+    primary = Color(0xFF0E9384),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFF9FF2E4),
-    onPrimaryContainer = Color(0xFF00201C),
-    secondary = Color(0xFF4A635E),
+    primaryContainer = Color(0xFFE6F6F3),
+    onPrimaryContainer = Color(0xFF04302C),
+    secondary = Color(0xFF6B7280),
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFCCE8E1),
-    onSecondaryContainer = Color(0xFF06201B),
-    tertiary = Color(0xFF456179),
-    background = Color(0xFFF6FBF8),
-    onBackground = Color(0xFF191C1B),
-    surface = Color(0xFFF6FBF8),
-    onSurface = Color(0xFF191C1B),
-    surfaceVariant = Color(0xFFDAE5E1),
-    onSurfaceVariant = Color(0xFF3F4946),
-    outline = Color(0xFF6F7977),
-    error = Color(0xFFBA1A1A)
+    secondaryContainer = Color(0xFFF3F4F6),
+    onSecondaryContainer = Color(0xFF1F2937),
+    tertiary = Color(0xFF0EA5E9),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFF5F5F7),
+    onBackground = Color(0xFF1C1C1E),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1C1C1E),
+    surfaceVariant = Color(0xFFF2F2F7),
+    onSurfaceVariant = Color(0xFF6E6E73),
+    outline = Color(0xFFE5E5EA),
+    outlineVariant = Color(0xFFF0F0F2),
+    error = Color(0xFFD92D20),
+    onError = Color(0xFFFFFFFF)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF82D5C7),
-    onPrimary = Color(0xFF003731),
-    primaryContainer = Color(0xFF005046),
-    onPrimaryContainer = Color(0xFF9FF2E4),
-    secondary = Color(0xFFB0CCC5),
-    onSecondary = Color(0xFF1B3531),
-    secondaryContainer = Color(0xFF324B47),
-    onSecondaryContainer = Color(0xFFCCE8E1),
-    background = Color(0xFF191C1B),
-    onBackground = Color(0xFFE1E3E1),
-    surface = Color(0xFF191C1B),
-    onSurface = Color(0xFFE1E3E1),
-    surfaceVariant = Color(0xFF3F4946),
-    onSurfaceVariant = Color(0xFFBEC9C6)
+    primary = Color(0xFF5EEAD4),
+    onPrimary = Color(0xFF04302C),
+    primaryContainer = Color(0xFF115E56),
+    onPrimaryContainer = Color(0xFFE6F6F3),
+    secondary = Color(0xFF9CA3AF),
+    onSecondary = Color(0xFF1F2937),
+    secondaryContainer = Color(0xFF374151),
+    onSecondaryContainer = Color(0xFFF3F4F6),
+    background = Color(0xFF111114),
+    onBackground = Color(0xFFEDEDF0),
+    surface = Color(0xFF1C1C20),
+    onSurface = Color(0xFFEDEDF0),
+    surfaceVariant = Color(0xFF2A2A2F),
+    onSurfaceVariant = Color(0xFFA1A1AA),
+    outline = Color(0xFF3A3A40),
+    outlineVariant = Color(0xFF2A2A2F),
+    error = Color(0xFFFF6B6B)
+)
+
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(28.dp)
 )
 
 @Composable
@@ -51,6 +68,7 @@ fun MedArchiveTheme(
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
+        shapes = AppShapes,
         content = content
     )
 }

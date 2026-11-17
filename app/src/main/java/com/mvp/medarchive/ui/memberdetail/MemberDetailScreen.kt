@@ -1,25 +1,22 @@
 package com.mvp.medarchive.ui.memberdetail
 
 import android.content.Intent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,10 +26,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
 import com.mvp.medarchive.ui.formatEpochDay
 import com.mvp.medarchive.ui.member.MemberDialog
@@ -79,7 +77,11 @@ fun MemberDetailScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { member?.let { onAddRecord(it.id) } }) { Text("+ 添加记录") }
+            ExtendedFloatingActionButton(
+                onClick = { member?.let { onAddRecord(it.id) } },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) { Text("+ 添加记录") }
         }
     ) { padding ->
         Column(
@@ -90,18 +92,30 @@ fun MemberDetailScreen(
                 .padding(16.dp)
         ) {
             member?.let { m ->
-                if (m.birthdate.isNotBlank()) Text("生日：${m.birthdate}", style = MaterialTheme.typography.bodyMedium)
-                if (m.bloodType.isNotBlank()) Text("血型：${m.bloodType}", style = MaterialTheme.typography.bodyMedium)
-                if (m.allergies.isNotBlank()) {
-                    Text("过敏史：${m.allergies}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                val hasInfo = m.birthdate.isNotBlank() || m.bloodType.isNotBlank() || m.allergies.isNotBlank()
+                AppCard {
+                    if (hasInfo) {
+                        if (m.birthdate.isNotBlank()) InfoLine("生日", m.birthdate)
+                        if (m.bloodType.isNotBlank()) InfoLine("血型", m.bloodType)
+                        if (m.allergies.isNotBlank()) InfoLine("过敏史", m.allergies, isError = true)
+                    } else {
+                        Text(
+                            "暂无更多信息，点「编辑」补充",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { showEdit = true }) { Text("编辑") }
+                    TextButton(onClick = { showDelete = true }) {
+                        Text("删除", color = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { showEdit = true }) { Text("编辑") }
-                TextButton(onClick = { showDelete = true }) { Text("删除") }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text("记录", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(16.dp))
+            Text("记录", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = filterType == null, onClick = { filterType = null }, label = { Text("全部") })
@@ -110,22 +124,29 @@ fun MemberDetailScreen(
                     FilterChip(selected = filterType == t, onClick = { filterType = t }, label = { Text(t) })
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             val shown = if (filterType == null) records else records.filter { it.type == filterType }
             if (shown.isEmpty()) {
-                Text("还没有记录，点右下角添加", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "还没有记录，点右下角添加",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     shown.forEach { r ->
-                        Card(Modifier.fillMaxWidth().clickable { onOpenRecord(r.id) }) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text(r.title, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "${r.type} · ${formatEpochDay(r.dateEpochDay)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                        AppCard(onClick = { onOpenRecord(r.id) }) {
+                            Text(
+                                r.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "${r.type} · ${formatEpochDay(r.dateEpochDay)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -155,6 +176,23 @@ fun MemberDetailScreen(
                 }) { Text("删除") }
             },
             dismissButton = { TextButton(onClick = { showDelete = false }) { Text("取消") } }
+        )
+    }
+}
+
+@Composable
+private fun InfoLine(label: String, value: String, isError: Boolean = false) {
+    Row(Modifier.padding(vertical = 3.dp)) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(64.dp)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
         )
     }
 }
