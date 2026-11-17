@@ -1,6 +1,9 @@
 package com.mvp.medarchive.ui.memberdetail
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,12 +39,15 @@ import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.formatEpochDay
 import com.mvp.medarchive.ui.member.MemberDialog
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MemberDetailScreen(
     vm: MemberDetailViewModel,
     onBack: () -> Unit,
     onAddRecord: (Long) -> Unit,
-    onOpenRecord: (Long) -> Unit
+    onOpenRecord: (Long) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val member by vm.member.collectAsState()
     val records by vm.records.collectAsState()
@@ -51,6 +57,15 @@ fun MemberDetailScreen(
     var filterType by remember { mutableStateOf<String?>(null) }
     var showEdit by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
+
+    val titleModifier = member?.let { m ->
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                rememberSharedContentState("member_name_${m.id}"),
+                animatedVisibilityScope
+            )
+        }
+    } ?: Modifier
 
     val uri = shareUri
     if (uri != null) {
@@ -69,6 +84,7 @@ fun MemberDetailScreen(
         topBar = {
             AppTopBar(
                 title = member?.name ?: "档案",
+                titleModifier = titleModifier,
                 onBack = onBack,
                 actions = {
                     TextButton(onClick = vm::export, enabled = !exporting) {
