@@ -53,6 +53,7 @@ import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.Avatar
 import com.mvp.medarchive.ui.common.CountUpText
 import com.mvp.medarchive.ui.common.SkeletonCard
+import com.mvp.medarchive.ui.common.SearchBar
 import com.mvp.medarchive.ui.common.StatusChip
 import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.member.MemberDialog
@@ -73,6 +74,11 @@ fun MemberListScreen(
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val totalRecords = items.sumOf { it.recordCount }
+    var query by remember { mutableStateOf("") }
+    val filtered = if (query.isBlank()) items else items.filter {
+        it.member.name.contains(query, ignoreCase = true) ||
+            it.member.allergies.contains(query, ignoreCase = true)
+    }
 
     LaunchedEffect(Unit) {
         delay(420)
@@ -120,6 +126,13 @@ fun MemberListScreen(
                     )
                 }
             }
+            Box(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                SearchBar(
+                    query = query,
+                    onQueryChange = { query = it },
+                    placeholder = "搜索成员姓名或过敏史"
+                )
+            }
             PullToRefreshBox(
                 isRefreshing = refreshing,
                 onRefresh = {
@@ -158,12 +171,20 @@ fun MemberListScreen(
                         }
                     }
 
+                    filtered.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            "没有匹配「$query」的成员",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     else -> LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        itemsIndexed(items, key = { _, item -> item.member.id }) { index, item ->
+                        itemsIndexed(filtered, key = { _, item -> item.member.id }) { index, item ->
                             AppCard(
                                 modifier = Modifier.staggeredAppear(index),
                                 onClick = { onOpen(item.member.id) }

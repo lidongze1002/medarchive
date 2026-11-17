@@ -29,12 +29,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
+import com.mvp.medarchive.ui.common.StatusChip
 import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.formatEpochDay
 import com.mvp.medarchive.ui.member.MemberDialog
@@ -110,22 +112,16 @@ fun MemberDetailScreen(
         ) {
             member?.let { m ->
                 val hasInfo = m.birthdate.isNotBlank() || m.bloodType.isNotBlank() || m.allergies.isNotBlank()
-                AppCard {
-                    if (hasInfo) {
+                if (hasInfo) {
+                    AppCard {
                         if (m.birthdate.isNotBlank()) InfoLine("生日", m.birthdate)
                         if (m.bloodType.isNotBlank()) InfoLine("血型", m.bloodType)
                         if (m.allergies.isNotBlank()) InfoLine("过敏史", m.allergies, isError = true)
-                    } else {
-                        Text(
-                            "暂无更多信息，点「编辑」补充",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
+                    Spacer(Modifier.height(6.dp))
                 }
-                Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = { showEdit = true }) { Text("编辑") }
+                    TextButton(onClick = { showEdit = true }) { Text("编辑资料") }
                     TextButton(onClick = { showDelete = true }) {
                         Text("删除", color = MaterialTheme.colorScheme.error)
                     }
@@ -156,17 +152,28 @@ fun MemberDetailScreen(
                             modifier = Modifier.staggeredAppear(index),
                             onClick = { onOpenRecord(r.id) }
                         ) {
-                            Text(
-                                r.title,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                "${r.type} · ${formatEpochDay(r.dateEpochDay)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        r.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        formatEpochDay(r.dateEpochDay),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                StatusChip(
+                                    text = r.type,
+                                    container = MaterialTheme.colorScheme.secondaryContainer,
+                                    content = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
                         }
                     }
                 }

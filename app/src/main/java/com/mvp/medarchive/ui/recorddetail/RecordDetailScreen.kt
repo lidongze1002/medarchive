@@ -1,9 +1,6 @@
 package com.mvp.medarchive.ui.recorddetail
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,21 +11,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
+import com.mvp.medarchive.ui.common.StatusChip
 import com.mvp.medarchive.ui.formatEpochDay
 import java.io.File
 
@@ -59,36 +56,66 @@ fun RecordDetailScreen(
                 .padding(16.dp)
         ) {
             record?.let { r ->
-                Text(r.title, style = MaterialTheme.typography.titleLarge)
-                Text(
-                    "${r.type} · ${formatEpochDay(r.dateEpochDay)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (r.hospital.isNotBlank()) Text("医院：${r.hospital}", style = MaterialTheme.typography.bodyMedium)
-                if (r.notes.isNotBlank()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(r.notes, style = MaterialTheme.typography.bodyMedium)
+                AppCard {
+                    StatusChip(
+                        text = r.type,
+                        container = MaterialTheme.colorScheme.secondaryContainer,
+                        content = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        r.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        formatEpochDay(r.dateEpochDay),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (r.hospital.isNotBlank() || r.notes.isNotBlank()) {
+                    Spacer(Modifier.height(10.dp))
+                    AppCard {
+                        if (r.hospital.isNotBlank()) LabeledText("医院", r.hospital)
+                        if (r.notes.isNotBlank()) LabeledText("备注", r.notes)
+                    }
                 }
             }
             if (imagePaths.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                Text("图片", style = MaterialTheme.typography.titleSmall)
-                imagePaths.forEach { path -> FullImage(path) }
+                Text(
+                    "图片",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(8.dp))
+                imagePaths.forEach { path ->
+                    AsyncImage(
+                        model = File(path),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    )
+                }
             }
             Spacer(Modifier.height(24.dp))
-            Button(onClick = { vm.delete { onDeleted() } }, modifier = Modifier.fillMaxWidth()) {
-                Text("删除记录")
-            }
+            Button(
+                onClick = { vm.delete { onDeleted() } },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
+            ) { Text("删除记录") }
         }
     }
 }
 
 @Composable
-private fun FullImage(path: String) {
-    AsyncImage(
-        model = File(path),
-        contentDescription = null,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-    )
+private fun LabeledText(label: String, value: String) {
+    Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(Modifier.height(2.dp))
+    Text(value, style = MaterialTheme.typography.bodyMedium)
+    Spacer(Modifier.height(10.dp))
 }
