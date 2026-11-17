@@ -109,6 +109,7 @@ fun MemberListScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showDialog = true },
