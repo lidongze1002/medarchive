@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.recordform
 
+import com.mvp.medarchive.ui.i18n.T
+
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -145,7 +147,7 @@ fun RecordFormScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("类型", style = MaterialTheme.typography.titleSmall)
+            Text(T("类型", "Type"), style = MaterialTheme.typography.titleSmall)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TYPES.forEach { t ->
                     FilterChip(
@@ -158,32 +160,36 @@ fun RecordFormScreen(
             OutlinedTextField(
                 value = state.title,
                 onValueChange = vm::onTitleChange,
-                label = { Text("标题") },
+                label = { Text(T("标题", "Title")) },
                 isError = state.error != null,
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("日期：${com.mvp.medarchive.ui.formatEpochDay(state.dateEpochDay)}")
+                Text(
+                    T(
+                        "日期：${com.mvp.medarchive.ui.formatEpochDay(state.dateEpochDay)}",
+                        "Date: ${com.mvp.medarchive.ui.formatEpochDay(state.dateEpochDay)}"
+                    )
+                )
             }
             OutlinedTextField(
                 value = state.hospital,
                 onValueChange = vm::onHospitalChange,
-                label = { Text("医院（可空）") },
+                label = { Text(T("医院（可空）", "Hospital (optional)")) },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = state.notes,
                 onValueChange = vm::onNotesChange,
-                label = { Text("备注（可空）") },
+                label = { Text(T("备注（可空）", "Notes (optional)")) },
                 modifier = Modifier.fillMaxWidth()
             )
             if (state.error != null) {
                 Text(state.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
-            Text("报告图片", style = MaterialTheme.typography.titleSmall)
+            Text(T("报告图片", "Report images"), style = MaterialTheme.typography.titleSmall)
             if (state.images.isEmpty()) {
-                Text(
-                    "扫描会自动找边、拉正并增强，纸质报告拍出来更清楚。",
+                Text(T("扫描会自动找边、拉正并增强，纸质报告拍出来更清楚。", "Scan finds edges, straightens and enhances paper reports."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -197,7 +203,10 @@ fun RecordFormScreen(
                     }
                 }
                 Text(
-                    "共 ${state.images.size} 张，点缩略图可移除",
+                    T(
+                        "共 ${state.images.size} 张，点缩略图可移除",
+                        "${state.images.size} images · tap a thumbnail to remove"
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -209,17 +218,17 @@ fun RecordFormScreen(
                 Button(
                     onClick = { launchCamera(scan = true) },
                     modifier = Modifier.weight(1f)
-                ) { Text("扫描") }
+                ) { Text(T("扫描", "Scan")) }
                 OutlinedButton(
                     onClick = { launchCamera() },
                     modifier = Modifier.weight(1f)
-                ) { Text("拍照") }
+                ) { Text(T("拍照", "Camera")) }
                 OutlinedButton(
                     onClick = {
                         com.mvp.medarchive.security.ExternalUi.launch { pickImages.launch("image/*") }
                     },
                     modifier = Modifier.weight(1f)
-                ) { Text("相册") }
+                ) { Text(T("相册", "Gallery")) }
             }
             if (state.images.isNotEmpty()) {
                 Row(
@@ -230,14 +239,14 @@ fun RecordFormScreen(
                         onClick = { vm.enhanceImages() },
                         enabled = !state.ocrBusy,
                         modifier = Modifier.weight(1f)
-                    ) { Text("增强") }
+                    ) { Text(T("增强", "Enhance")) }
                     OutlinedButton(
                         onClick = {
                             if (ProManager(ctx).isPro()) vm.ocrImages() else showPro = true
                         },
                         enabled = !state.ocrBusy,
                         modifier = Modifier.weight(1f)
-                    ) { Text(if (state.ocrBusy) "识别中…" else "识别文字") }
+                    ) { Text(if (state.ocrBusy) T("识别中…", "Recognizing…") else T("识别文字", "Recognize text")) }
                 }
                 val msg = state.ocrMessage
                 if (msg != null) {
@@ -245,7 +254,7 @@ fun RecordFormScreen(
                 }
             }
             Button(onClick = { vm.save(onBack) }, enabled = !state.saving, modifier = Modifier.fillMaxWidth()) {
-                Text(if (state.saving) "保存中…" else "保存")
+                Text(if (state.saving) T("保存中…", "Saving…") else T("保存", "Save"))
             }
         }
     }
@@ -256,16 +265,16 @@ fun RecordFormScreen(
     if (showContinueScan) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showContinueScan = false },
-            title = { Text("要接着扫描下一页吗？") },
-            text = { Text("这一页已加入记录。多页报告可以连续扫描，最后一起保存。") },
+            title = { Text(T("要接着扫描下一页吗？", "Scan another page?")) },
+            text = { Text(T("这一页已加入记录。多页报告可以连续扫描，最后一起保存。", "Page added. Scan more pages, then save together.")) },
             confirmButton = {
                 TextButton(onClick = {
                     showContinueScan = false
                     launchCamera(scan = true)
-                }) { Text("继续扫描") }
+                }) { Text(T("继续扫描", "Scan next page")) }
             },
             dismissButton = {
-                TextButton(onClick = { showContinueScan = false }) { Text("完成") }
+                TextButton(onClick = { showContinueScan = false }) { Text(T("完成", "Done")) }
             }
         )
     }
@@ -279,9 +288,9 @@ fun RecordFormScreen(
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { vm.onDateChange(it / 86_400_000L) }
                     showDatePicker = false
-                }) { Text("确定") }
+                }) { Text(T("确定", "OK")) }
             },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("取消") } }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text(T("取消", "Cancel")) } }
         ) {
             DatePicker(state = datePickerState)
         }
@@ -292,7 +301,7 @@ fun RecordFormScreen(
 private fun Thumb(path: String, onClick: () -> Unit) {
     AsyncImage(
         model = File(path),
-        contentDescription = "移除",
+        contentDescription = T("移除", "Remove"),
         modifier = Modifier.size(80.dp).clickable { onClick() }
     )
 }

@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.vitals
 
+import com.mvp.medarchive.ui.i18n.T
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -110,10 +112,16 @@ fun VitalsCard(records: List<Record>) {
         runCatching { source.readLast(30) }
             .onSuccess { list ->
                 healthSeries = list
-                healthMessage = if (list.isEmpty()) "已连接健康 App，但最近 30 天没有读到数据" else null
+                healthMessage = if (list.isEmpty()) T(
+                    "已连接健康 App，但最近 30 天没有读到数据",
+                    "Connected, but no health data in the last 30 days"
+                ) else null
             }
             .onFailure { e ->
-                healthMessage = if (e is SecurityException) "没有读取健康数据的权限" else "读取健康数据失败"
+                healthMessage = if (e is SecurityException) T(
+                    "没有读取健康数据的权限",
+                    "No permission to read health data"
+                ) else T("读取健康数据失败", "Failed to read health data")
             }
         syncing = false
     }
@@ -125,7 +133,7 @@ fun VitalsCard(records: List<Record>) {
             scope.launch { loadHealth() }
         } else {
             syncing = false
-            healthMessage = "未获得健康数据权限"
+            healthMessage = T("未获得健康数据权限", "Health data permission not granted")
         }
     }
 
@@ -143,8 +151,7 @@ fun VitalsCard(records: List<Record>) {
 
     AppCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "健康趋势",
+            Text(T("健康趋势", "Health trends"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -152,7 +159,10 @@ fun VitalsCard(records: List<Record>) {
             TextButton(
                 onClick = {
                     if (!source.isAvailable()) {
-                        healthMessage = "需要「健康连接」：Android 14+ 系统自带，旧系统需单独安装"
+                        healthMessage = T(
+                            "需要「健康连接」：Android 14+ 系统自带，旧系统需单独安装",
+                            "Health Connect required: built in on Android 14+, install it on older versions"
+                        )
                         return@TextButton
                     }
                     scope.launch {
@@ -166,12 +176,15 @@ fun VitalsCard(records: List<Record>) {
                     }
                 },
                 enabled = !syncing
-            ) { Text(if (syncing) "同步中…" else "同步手环") }
+            ) { Text(if (syncing) T("同步中…", "Syncing…") else T("同步手环", "Sync band")) }
         }
 
         if (current != null) {
             Text(
-                "共 ${current.points.size} 次 · 点上方指标切换",
+                T(
+                    "共 ${current.points.size} 次 · 点上方指标切换",
+                    "${current.points.size} readings · tap a metric above"
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -187,8 +200,7 @@ fun VitalsCard(records: List<Record>) {
 
         if (current == null) {
             Spacer(Modifier.height(6.dp))
-            Text(
-                "在备注里写「血压 135/85」「血糖 5.6」或「血红蛋白 130」会自动生成趋势；也可以点右上角「同步手环」读取体脂秤/手环数据。",
+            Text(T("在备注里写「血压 135/85」「血糖 5.6」或「血红蛋白 130」会自动生成趋势；也可以点右上角「同步手环」读取体脂秤/手环数据。", "Write “BP 135/85”, “glucose 5.6” or “hemoglobin 130” in notes to build trends, or tap “Sync band” to import scale/band data."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -235,7 +247,7 @@ fun VitalsCard(records: List<Record>) {
                     val diff = last.primary - prev.primary
                     if (kotlin.math.abs(diff) >= 0.05f) {
                         Text(
-                            (if (diff > 0) "较上次 +" else "较上次 ") + formatValue(diff),
+                            (if (diff > 0) T("较上次 +", "vs last +") else T("较上次 ", "vs last ")) + formatValue(diff),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -268,8 +280,7 @@ fun VitalsCard(records: List<Record>) {
             }
             if (HealthConnectSource.SOURCE_KEYS.contains(current.metric.key)) {
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    "数据来自健康 App（体脂秤/手环），最近 30 天",
+                Text(T("数据来自健康 App（体脂秤/手环），最近 30 天", "From health apps (scale/band), last 30 days"),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

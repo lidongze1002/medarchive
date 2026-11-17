@@ -3,13 +3,14 @@ package com.mvp.medarchive.ui.reminder
 import com.mvp.medarchive.data.db.MedDose
 import com.mvp.medarchive.data.db.MedReminder
 import com.mvp.medarchive.reminder.ReminderScheduler
+import com.mvp.medarchive.ui.i18n.T
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 data class Adherence(val taken: Int, val scheduled: Int) {
-    val text: String get() = "近 7 天 $taken/$scheduled 次"
+    val text: String get() = T("近 7 天 $taken/$scheduled 次", "Last 7 days $taken/$scheduled")
 }
 
 /**

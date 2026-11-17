@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.common
 
+import com.mvp.medarchive.ui.i18n.T
+
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,7 +49,7 @@ fun ZoomableImage(path: String, modifier: Modifier = Modifier) {
     ) {
         AsyncImage(
             model = File(path),
-            contentDescription = "检查单图片，可双指缩放",
+            contentDescription = T("检查单图片，可双指缩放", "Report image, pinch to zoom"),
             contentScale = ContentScale.FillWidth,
             modifier = Modifier.fillMaxWidth()
         )

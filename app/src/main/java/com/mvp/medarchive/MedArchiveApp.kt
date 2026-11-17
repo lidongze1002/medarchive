@@ -4,6 +4,7 @@ import android.app.Application
 import com.mvp.medarchive.di.AppContainer
 import com.mvp.medarchive.reminder.ReminderNotifier
 import com.mvp.medarchive.reminder.ReminderScheduler
+import com.mvp.medarchive.ui.i18n.Lang
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -14,6 +15,7 @@ class MedArchiveApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Lang.load(this)
         container = AppContainer(this)
         ReminderNotifier.ensureChannel(this)
         CoroutineScope(Dispatchers.IO).launch {

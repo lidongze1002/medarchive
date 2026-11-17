@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.member
 
+import com.mvp.medarchive.ui.i18n.T
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -76,7 +78,7 @@ fun MemberDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "添加成员" else "编辑成员") },
+        title = { Text(if (initial == null) T("添加成员", "Add member") else T("编辑成员", "Edit member")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
@@ -97,26 +99,25 @@ fun MemberDialog(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Text(
-                            "不设则显示姓名首字",
+                        Text(T("不设则显示姓名首字", "Uses the first letter if empty"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
                 Spacer(Modifier.height(2.dp))
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("姓名") })
-                OutlinedTextField(value = birthdate, onValueChange = { birthdate = it }, label = { Text("生日（可空，如 1990-01-01）") })
-                OutlinedTextField(value = blood, onValueChange = { blood = it }, label = { Text("血型（可空）") })
-                OutlinedTextField(value = allergies, onValueChange = { allergies = it }, label = { Text("过敏史（可空）") })
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("备注（可空）") })
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(T("姓名", "Name")) })
+                OutlinedTextField(value = birthdate, onValueChange = { birthdate = it }, label = { Text(T("生日（可空，如 1990-01-01）", "Birthday (optional, e.g. 1990-01-01)")) })
+                OutlinedTextField(value = blood, onValueChange = { blood = it }, label = { Text(T("血型（可空）", "Blood type (optional)")) })
+                OutlinedTextField(value = allergies, onValueChange = { allergies = it }, label = { Text(T("过敏史（可空）", "Allergies (optional)")) })
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(T("备注（可空）", "Notes (optional)")) })
             }
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name, birthdate, blood, allergies, notes, avatarPath) }) {
-                Text("保存")
+                Text(T("保存", "Save"))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(T("取消", "Cancel")) } }
     )
 }

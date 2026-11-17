@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.memberlist
 
+import com.mvp.medarchive.ui.i18n.T
+
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -68,6 +70,8 @@ import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.billing.ProDialog
 import com.mvp.medarchive.billing.ProManager
 import com.mvp.medarchive.security.LockSettingsDialog
+import com.mvp.medarchive.ui.i18n.LanguageDialog
+import com.mvp.medarchive.ui.i18n.Lang
 import com.mvp.medarchive.ui.member.MemberDialog
 import com.mvp.medarchive.ui.theme.DisplayPrefs
 import kotlinx.coroutines.Dispatchers
@@ -100,7 +104,8 @@ fun MemberListScreen(
             val n = runCatching { vm.importBackup(uri) }.getOrElse { -1 }
             android.widget.Toast.makeText(
                 ctx,
-                if (n >= 0) "已导入 $n 条记录" else "导入失败：文件格式不正确",
+                if (n >= 0) T("已导入 $n 条记录", "Imported $n records")
+                else T("导入失败：文件格式不正确", "Import failed: invalid file"),
                 android.widget.Toast.LENGTH_LONG
             ).show()
         }
@@ -120,6 +125,7 @@ fun MemberListScreen(
         }
     }
     var query by remember { mutableStateOf("") }
+    var showLanguage by remember { mutableStateOf(false) }
     var debouncedQuery by remember { mutableStateOf("") }
     LaunchedEffect(query) {
         delay(200)
@@ -151,7 +157,7 @@ fun MemberListScreen(
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("添加成员")
+                Text(T("添加成员", "Add member"))
             }
         }
     ) { padding ->
@@ -170,21 +176,23 @@ fun MemberListScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(
-                            "家庭病历本",
+                        Text(T("家庭病历本", "Family Health Records"),
                             color = Color.White,
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "${items.size} 位成员 · ${totalRecords} 条记录",
+                            T(
+                                "${items.size} 位成员 · ${totalRecords} 条记录",
+                                "${items.size} member${if (items.size == 1) "" else "s"} · " +
+                                    "$totalRecords record${if (totalRecords == 1) "" else "s"}"
+                            ),
                             color = Color.White.copy(alpha = 0.85f),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(Modifier.height(6.dp))
-                        Text(
-                            "查看全部记录 ›",
+                        Text(T("查看全部记录 ›", "See all records ›"),
                             color = Color.White,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
@@ -196,10 +204,10 @@ fun MemberListScreen(
                         )
                     }
                     IconButton(onClick = { showLock = true }) {
-                        Icon(Icons.Filled.Lock, contentDescription = "应用锁", tint = Color.White)
+                        Icon(Icons.Filled.Lock, contentDescription = T("应用锁", "App lock"), tint = Color.White)
                     }
                     IconButton(onClick = { showDataSheet = true }) {
-                        Icon(Icons.Filled.Share, contentDescription = "导出数据", tint = Color.White)
+                        Icon(Icons.Filled.Share, contentDescription = T("导出数据", "Export data"), tint = Color.White)
                     }
                 }
             }
@@ -207,7 +215,7 @@ fun MemberListScreen(
                 SearchBar(
                     query = query,
                     onQueryChange = { query = it },
-                    placeholder = "搜索成员姓名或过敏史"
+                    placeholder = T("搜索成员姓名或过敏史", "Search member name or allergies")
                 )
             }
             PullToRefreshBox(
@@ -238,10 +246,9 @@ fun MemberListScreen(
                                 modifier = Modifier.size(120.dp)
                             )
                             Spacer(Modifier.height(8.dp))
-                            Text("还没有成员", style = MaterialTheme.typography.titleMedium)
+                            Text(T("还没有成员", "No members yet"), style = MaterialTheme.typography.titleMedium)
                             Spacer(Modifier.height(4.dp))
-                            Text(
-                                "点右下角「添加成员」开始",
+                            Text(T("点右下角「添加成员」开始", "Tap “Add member” at the bottom right"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -304,7 +311,7 @@ fun MemberListScreen(
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(
                                                     Icons.Filled.Warning,
-                                                    contentDescription = "过敏",
+                                                    contentDescription = T("过敏", "Allergy"),
                                                     tint = MaterialTheme.colorScheme.error,
                                                     modifier = Modifier.size(14.dp)
                                                 )
@@ -334,8 +341,7 @@ fun MemberListScreen(
                                             color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
                                         Spacer(Modifier.width(2.dp))
-                                        Text(
-                                            "条",
+                                        Text(T("条", ""),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
@@ -364,15 +370,38 @@ fun MemberListScreen(
     if (showPro) {
         ProDialog(onDismiss = { showPro = false })
     }
+    if (showLanguage) {
+        LanguageDialog(onDismiss = { showLanguage = false })
+    }
     if (showDataSheet) {
         val largeText = DisplayPrefs.largeText
         androidx.compose.material3.ModalBottomSheet(onDismissRequest = { showDataSheet = false }) {
             Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-                Text(
-                    "设置与备份",
+                Text(T("设置与备份", "Settings & backup"),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { showLanguage = true }
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(T("语言 / Language", "Language / 语言"), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            when (Lang.preference) {
+                                "zh" -> "中文"
+                                "en" -> "English"
+                                else -> T("跟随系统", "System")
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -383,9 +412,8 @@ fun MemberListScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("大字号", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "字更大、行距更宽，方便长辈看",
+                        Text(T("大字号", "Large text"), style = MaterialTheme.typography.bodyLarge)
+                        Text(T("字更大、行距更宽，方便长辈看", "Larger text and line spacing for older users"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -395,8 +423,7 @@ fun MemberListScreen(
                         onCheckedChange = { DisplayPrefs.setLargeText(ctx, it) }
                     )
                 }
-                Text(
-                    "导出备份（含照片）",
+                Text(T("导出备份（含照片）", "Export backup (with photos)"),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
@@ -405,8 +432,7 @@ fun MemberListScreen(
                         }
                         .padding(20.dp)
                 )
-                Text(
-                    "导入备份（Pro）",
+                Text(T("导入备份（Pro）", "Import backup (Pro)"),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {

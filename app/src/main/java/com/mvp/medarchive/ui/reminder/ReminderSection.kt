@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.reminder
 
+import com.mvp.medarchive.ui.i18n.T
+
 import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
@@ -58,18 +60,16 @@ fun ReminderSection(
 
     AppCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "用药提醒",
+            Text(T("用药提醒", "Medication reminders"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = onAdd) { Text("添加") }
+            TextButton(onClick = onAdd) { Text(T("添加", "Add")) }
         }
 
         if (reminders.isEmpty()) {
-            Text(
-                "添加后每天按设定的时间提醒吃药；点时间胶囊可以打卡。",
+            Text(T("添加后每天按设定的时间提醒吃药；点时间胶囊可以打卡。", "Daily reminders at your set times; tap a time chip to check in."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -174,8 +174,7 @@ private fun ExactAlarmHint(ctx: Context) {
     val manager = ctx.getSystemService(AlarmManager::class.java) ?: return
     if (manager.canScheduleExactAlarms()) return
     Spacer(Modifier.height(8.dp))
-    Text(
-        "提醒可能延迟：点这里允许「闹钟和提醒」",
+    Text(T("提醒可能延迟：点这里允许「闹钟和提醒」", "Reminders may be late: tap to allow alarms & reminders"),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
         modifier = Modifier.clickable {

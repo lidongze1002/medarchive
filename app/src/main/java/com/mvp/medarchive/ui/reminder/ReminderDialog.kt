@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.reminder
 
+import com.mvp.medarchive.ui.i18n.T
+
 import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -74,26 +76,26 @@ fun ReminderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "添加用药提醒" else "编辑用药提醒") },
+        title = { Text(if (initial == null) T("添加用药提醒", "Add reminder") else T("编辑用药提醒", "Edit reminder")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = drug,
                     onValueChange = { drug = it },
-                    label = { Text("药品名，如 缬沙坦") },
+                    label = { Text(T("药品名，如 缬沙坦", "Drug name, e.g. Valsartan")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = dosage,
                     onValueChange = { dosage = it },
-                    label = { Text("剂量（可空，如 1 片 / 80mg）") },
+                    label = { Text(T("剂量（可空，如 1 片 / 80mg）", "Dose (optional, e.g. 1 tablet / 80mg)")) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text("每天提醒时间", style = MaterialTheme.typography.labelLarge)
+                Text(T("每天提醒时间", "Daily reminder times"), style = MaterialTheme.typography.labelLarge)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     times.forEach { t ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -101,17 +103,16 @@ fun ReminderDialog(
                             Spacer(Modifier.width(8.dp))
                             TextButton(onClick = {
                                 times = times.filterNot { it == t }.ifEmpty { times }
-                            }) { Text("移除") }
+                            }) { Text(T("移除", "Remove")) }
                         }
                     }
-                    TextButton(onClick = { addTime() }) { Text("+ 添加时间") }
+                    TextButton(onClick = { addTime() }) { Text(T("+ 添加时间", "+ Add time")) }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("启用提醒", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "关闭后保留设置但不再通知",
+                        Text(T("启用提醒", "Enable reminder"), style = MaterialTheme.typography.bodyLarge)
+                        Text(T("关闭后保留设置但不再通知", "Keeps settings but stops alerts"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -124,16 +125,16 @@ fun ReminderDialog(
             TextButton(
                 onClick = { onSave(drug, dosage, times, enabled) },
                 enabled = drug.isNotBlank() && times.isNotEmpty()
-            ) { Text("保存") }
+            ) { Text(T("保存", "Save")) }
         },
         dismissButton = {
             Row {
                 if (initial != null && onDelete != null) {
                     TextButton(onClick = onDelete) {
-                        Text("删除", color = MaterialTheme.colorScheme.error)
+                        Text(T("删除", "Delete"), color = MaterialTheme.colorScheme.error)
                     }
                 }
-                TextButton(onClick = onDismiss) { Text("取消") }
+                TextButton(onClick = onDismiss) { Text(T("取消", "Cancel")) }
             }
         }
     )

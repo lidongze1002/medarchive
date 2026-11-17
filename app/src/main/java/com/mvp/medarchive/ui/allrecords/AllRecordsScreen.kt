@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.allrecords
 
+import com.mvp.medarchive.ui.i18n.T
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -78,7 +80,7 @@ fun AllRecordsScreen(
                 SearchBar(
                     query = query,
                     onQueryChange = { query = it },
-                    placeholder = "搜索标题、医院、备注或成员"
+                    placeholder = T("搜索标题、医院、备注或成员", "Search title, hospital, notes or member")
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -88,7 +90,7 @@ fun AllRecordsScreen(
                     FilterChip(
                         selected = filterType == null,
                         onClick = { filterType = null },
-                        label = { Text("全部") }
+                        label = { Text(T("全部", "All")) }
                     )
                     FILTER_TYPES.forEach { t ->
                         FilterChip(

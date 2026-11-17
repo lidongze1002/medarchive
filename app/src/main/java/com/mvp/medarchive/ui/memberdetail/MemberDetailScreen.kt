@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.memberdetail
 
+import com.mvp.medarchive.ui.i18n.T
+
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -62,6 +64,7 @@ import com.mvp.medarchive.data.db.MedReminder
 import com.mvp.medarchive.data.db.Member
 import com.mvp.medarchive.data.db.Record
 import com.mvp.medarchive.ui.ageFromBirthdate
+import com.mvp.medarchive.ui.ageText
 import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
 import com.mvp.medarchive.ui.common.Avatar
@@ -159,10 +162,10 @@ fun MemberDetailScreen(
                 onBack = onBack,
                 actions = {
                     TextButton(onClick = vm::export, enabled = !exporting) {
-                        Text(if (exporting) "导出中…" else "导出 PDF")
+                        Text(if (exporting) T("导出中…", "Exporting…") else T("导出 PDF", "Export PDF"))
                     }
                     IconButton(onClick = { showSheet = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "更多操作")
+                        Icon(Icons.Filled.MoreVert, contentDescription = T("更多操作", "More actions"))
                     }
                 }
             )
@@ -178,7 +181,7 @@ fun MemberDetailScreen(
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
-            ) { Text("+ 添加记录") }
+            ) { Text(T("+ 添加记录", "+ Add record")) }
         }
     ) { padding ->
         LazyColumn(
@@ -236,8 +239,7 @@ fun MemberDetailScreen(
                         .padding(top = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "就诊记录",
+                    Text(T("就诊记录", "Medical records"),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -258,7 +260,7 @@ fun MemberDetailScreen(
                     FilterChip(
                         selected = filterType == null,
                         onClick = { filterType = null },
-                        label = { Text("全部") }
+                        label = { Text(T("全部", "All")) }
                     )
                     RECORD_TYPES.forEach { t ->
                         FilterChip(
@@ -305,22 +307,21 @@ fun MemberDetailScreen(
     if (showDelete) {
         AlertDialog(
             onDismissRequest = { showDelete = false },
-            title = { Text("删除成员") },
+            title = { Text(T("删除成员", "Delete member")) },
             text = { Text("确定删除「${member?.name}」？其所有记录与照片也会一并删除。") },
             confirmButton = {
                 TextButton(onClick = {
                     showDelete = false
                     vm.deleteMember(onBack)
-                }) { Text("删除") }
+                }) { Text(T("删除", "Delete")) }
             },
-            dismissButton = { TextButton(onClick = { showDelete = false }) { Text("取消") } }
+            dismissButton = { TextButton(onClick = { showDelete = false }) { Text(T("取消", "Cancel")) } }
         )
     }
     if (showSheet) {
         ModalBottomSheet(onDismissRequest = { showSheet = false }) {
             Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-                Text(
-                    "更多操作",
+                Text(T("更多操作", "More actions"),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
@@ -335,7 +336,7 @@ fun MemberDetailScreen(
                         .padding(horizontal = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("编辑资料", style = MaterialTheme.typography.bodyLarge)
+                    Text(T("编辑资料", "Edit profile"), style = MaterialTheme.typography.bodyLarge)
                 }
                 Row(
                     Modifier
@@ -350,8 +351,7 @@ fun MemberDetailScreen(
                 ) {
                     Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.width(16.dp))
-                    Text(
-                        "删除成员",
+                    Text(T("删除成员", "Delete member"),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -362,15 +362,15 @@ fun MemberDetailScreen(
     if (pendingDeleteId != null) {
         AlertDialog(
             onDismissRequest = { pendingDeleteId = null },
-            title = { Text("删除记录") },
-            text = { Text("确定删除这条记录？照片也会一并删除。") },
+            title = { Text(T("删除记录", "Delete record")) },
+            text = { Text(T("确定删除这条记录？照片也会一并删除。", "Delete this record? Its photos will also be removed.")) },
             confirmButton = {
                 TextButton(onClick = {
                     pendingDeleteId?.let { vm.deleteRecord(it) }
                     pendingDeleteId = null
-                }) { Text("删除") }
+                }) { Text(T("删除", "Delete")) }
             },
-            dismissButton = { TextButton(onClick = { pendingDeleteId = null }) { Text("取消") } }
+            dismissButton = { TextButton(onClick = { pendingDeleteId = null }) { Text(T("取消", "Cancel")) } }
         )
     }
     if (showPro) {
@@ -409,8 +409,8 @@ private fun ProfileCard(m: Member) {
                 )
                 val age = ageFromBirthdate(m.birthdate)
                 val meta = listOfNotNull(
-                    age?.let { "$it 岁" },
-                    m.bloodType.takeIf { it.isNotBlank() }?.let { "血型 $it" }
+                    age?.let { ageText(it) },
+                    m.bloodType.takeIf { it.isNotBlank() }?.let { T("血型 $it", "Type $it") }
                 ).joinToString(" · ")
                 if (meta.isNotBlank()) {
                     Spacer(Modifier.height(4.dp))
@@ -437,14 +437,13 @@ private fun AllergyBanner(allergies: String) {
     ) {
         Icon(
             Icons.Filled.Warning,
-            contentDescription = "过敏警示",
+            contentDescription = T("过敏警示", "Allergy alert"),
             tint = MaterialTheme.colorScheme.onErrorContainer,
             modifier = Modifier.size(22.dp)
         )
         Spacer(Modifier.width(12.dp))
         Column {
-            Text(
-                "过敏史",
+            Text(T("过敏史", "Allergies"),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.75f)
             )
@@ -464,10 +463,13 @@ private fun InfoCard(m: Member) {
     AppCard {
         if (m.birthdate.isNotBlank()) {
             val age = ageFromBirthdate(m.birthdate)
-            InfoLine("生日", if (age != null) "${m.birthdate}（$age 岁）" else m.birthdate)
+            InfoLine(
+                T("生日", "Birthday"),
+                if (age != null) T("${m.birthdate}（$age 岁）", "${m.birthdate} ($age yrs)") else m.birthdate
+            )
         }
-        if (m.bloodType.isNotBlank()) InfoLine("血型", m.bloodType)
-        if (m.notes.isNotBlank()) InfoLine("备注", m.notes)
+        if (m.bloodType.isNotBlank()) InfoLine(T("血型", "Blood type"), m.bloodType)
+        if (m.notes.isNotBlank()) InfoLine(T("备注", "Notes"), m.notes)
     }
 }
 
@@ -515,7 +517,7 @@ private fun SwipeRecordRow(
             ) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = "删除记录",
+                    contentDescription = T("删除记录", "Delete record"),
                     tint = MaterialTheme.colorScheme.onErrorContainer
                 )
             }

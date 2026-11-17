@@ -1,5 +1,7 @@
 package com.mvp.medarchive.ui.recorddetail
 
+import com.mvp.medarchive.ui.i18n.T
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -56,7 +58,7 @@ fun RecordDetailScreen(
             onBack = onBack,
             actions = {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Filled.Edit, contentDescription = "编辑")
+                    Icon(Icons.Filled.Edit, contentDescription = T("编辑", "Edit"))
                 }
             }
         )
@@ -130,8 +132,7 @@ fun RecordDetailScreen(
             if (imagePaths.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "检查单照片",
+                    Text(T("检查单照片", "Report photos"),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -159,7 +160,7 @@ fun RecordDetailScreen(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError
                 )
-            ) { Text("删除记录") }
+            ) { Text(T("删除记录", "Delete record")) }
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -167,15 +168,15 @@ fun RecordDetailScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("删除记录") },
-            text = { Text("删除后记录和照片都会移除，且无法恢复。") },
+            title = { Text(T("删除记录", "Delete record")) },
+            text = { Text(T("删除后记录和照片都会移除，且无法恢复。", "This can't be undone; the record and photos will be removed.")) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     vm.delete { onDeleted() }
-                }) { Text("删除") }
+                }) { Text(T("删除", "Delete")) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } }
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(T("取消", "Cancel")) } }
         )
     }
 }
