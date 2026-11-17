@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.mvp.medarchive.data.ImageStore
 import com.mvp.medarchive.data.db.Member
+import com.mvp.medarchive.security.ExternalUi
 import com.mvp.medarchive.ui.common.Avatar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -79,7 +80,9 @@ fun MemberDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
-                    Modifier.clickable { pickAvatar.launch("image/*") },
+                    Modifier.clickable {
+                        ExternalUi.launch { pickAvatar.launch("image/*") }
+                    },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Avatar(name = name, path = avatarPath, size = 64.dp)

@@ -102,7 +102,9 @@ fun MemberDetailScreen(
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            ctx.startActivity(Intent.createChooser(intent, "分享 PDF"))
+            com.mvp.medarchive.security.ExternalUi.launch {
+                ctx.startActivity(Intent.createChooser(intent, "分享 PDF"))
+            }
             vm.consumeShareUri()
         }
     }

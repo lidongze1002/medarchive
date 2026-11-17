@@ -59,18 +59,33 @@ class MainActivity : ComponentActivity() {
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_STOP) unlocked = false
+                        when (event) {
+                            Lifecycle.Event.ON_STOP -> {
+                                // 只有开启了应用锁才重锁；刚跳相册/相机/分享返回时不锁
+                                if (lock.isEnabled() && !com.mvp.medarchive.security.ExternalUi.isRecent()) {
+                                    unlocked = false
+                                }
+                                com.mvp.medarchive.security.ExternalUi.clear()
+                            }
+                            Lifecycle.Event.ON_START -> {
+                                if (!lock.isEnabled()) unlocked = true
+                                com.mvp.medarchive.security.ExternalUi.clear()
+                            }
+                            else -> {}
+                        }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
 
-                Box(Modifier.fillMaxSize()) {
+                if (!unlocked) {
+                    LockScreen { unlocked = true }
+                } else {
                 val container = (application as MedArchiveApp).container
                 var stack by remember { mutableStateOf(listOf<Screen>(Screen.List)) }
                 val current = stack.last()
 
-                BackHandler(enabled = unlocked) { if (stack.size > 1) stack = stack.dropLast(1) }
+                BackHandler { if (stack.size > 1) stack = stack.dropLast(1) }
 
                 SharedTransitionLayout {
                     val sharedScope = this
@@ -130,9 +145,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
-                }
-                if (!unlocked) {
-                    LockScreen { unlocked = true }
                 }
                 }
             }

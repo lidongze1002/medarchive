@@ -110,7 +110,9 @@ fun MemberListScreen(
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            ctx.startActivity(Intent.createChooser(intent, "导出备份"))
+            com.mvp.medarchive.security.ExternalUi.launch {
+                ctx.startActivity(Intent.createChooser(intent, "导出备份"))
+            }
         }
     }
     var query by remember { mutableStateOf("") }
@@ -353,7 +355,9 @@ fun MemberListScreen(
                         .clickable {
                             showDataSheet = false
                             if (ProManager(ctx).isPro()) {
-                                importLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                                com.mvp.medarchive.security.ExternalUi.launch {
+                                    importLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                                }
                             } else {
                                 showPro = true
                             }

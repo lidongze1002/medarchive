@@ -137,7 +137,9 @@ class BillingManager(
                 )
             )
             .build()
-        val result = c.launchBillingFlow(activity, params)
+        val result = com.mvp.medarchive.security.ExternalUi.launch {
+            c.launchBillingFlow(activity, params)
+        }
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
             onError("无法发起购买（${result.responseCode}）")
         }

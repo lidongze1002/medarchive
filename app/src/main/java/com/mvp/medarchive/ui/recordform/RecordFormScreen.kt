@@ -79,7 +79,7 @@ fun RecordFormScreen(
         val f = File(ctx.cacheDir, "cam_${System.currentTimeMillis()}.jpg")
         val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", f)
         pendingCameraUri = uri
-        takePicture.launch(uri)
+        com.mvp.medarchive.security.ExternalUi.launch { takePicture.launch(uri) }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -130,7 +130,9 @@ fun RecordFormScreen(
             Text("图片（点击缩略图可移除）", style = MaterialTheme.typography.titleSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { launchCamera() }) { Text("拍照") }
-                OutlinedButton(onClick = { pickImages.launch("image/*") }) { Text("从相册选择") }
+                OutlinedButton(onClick = {
+                    com.mvp.medarchive.security.ExternalUi.launch { pickImages.launch("image/*") }
+                }) { Text("从相册选择") }
             }
             if (state.images.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

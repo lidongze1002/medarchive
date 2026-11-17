@@ -63,6 +63,31 @@ fun LockScreen(onUnlock: () -> Unit) {
     val lock = remember { LockManager(ctx) }
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
+    var showNoDeviceLock by remember { mutableStateOf(false) }
+    val activity = remember(ctx) { ctx.findActivity() }
+
+    // 用手机自身的锁屏/指纹验证身份，验证通过后可重设应用密码（数据保留）
+    val confirmDevice = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            lock.disable()
+            onUnlock()
+        }
+    }
+
+    fun forgotPin() {
+        val km = ctx.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        val intent = km.createConfirmDeviceCredentialIntent(
+            "验证身份",
+            "验证通过后可重设「家庭病历本」的应用锁密码"
+        )
+        if (intent != null && activity != null) {
+            confirmDevice.launch(intent)
+        } else {
+            showNoDeviceLock = true
+        }
+    }
 
     Surface(
         modifier = Modifier
@@ -107,7 +132,13 @@ fun LockScreen(onUnlock: () -> Unit) {
             singleLine = true,
             isError = error,
             visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.NumberPassword,
+                imeAction = androidx.compose.ui.text.input.ImeAction.Done
+            ),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                onDone = { if (lock.verify(pin)) onUnlock() else error = true }
+            ),
             modifier = Modifier.fillMaxWidth()
         )
         if (error) {
@@ -123,8 +154,44 @@ fun LockScreen(onUnlock: () -> Unit) {
             onClick = { if (lock.verify(pin)) onUnlock() else error = true },
             modifier = Modifier.fillMaxWidth()
         ) { Text("解锁") }
+        TextButton(onClick = { forgotPin() }) { Text("忘记密码？") }
         }
     }
+
+    if (showNoDeviceLock) {
+        AlertDialog(
+            onDismissRequest = { showNoDeviceLock = false },
+            title = { Text("无法验证身份") },
+            text = {
+                Text(
+                    "手机还没有设置锁屏密码或指纹。请先在系统设置里设置锁屏，再回来点「忘记密码？」——" +
+                        "这样可以重设应用密码，且不会删除病历数据。"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showNoDeviceLock = false
+                    runCatching {
+                        ctx.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS)
+                        )
+                    }
+                }) { Text("去设置") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoDeviceLock = false }) { Text("取消") }
+            }
+        )
+    }
+}
+
+private fun Context.findActivity(): android.app.Activity? {
+    var c: Context = this
+    while (c is android.content.ContextWrapper) {
+        if (c is android.app.Activity) return c
+        c = c.baseContext
+    }
+    return null
 }
 
 @Composable
