@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
@@ -29,10 +29,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mvp.medarchive.ui.common.AppCard
+import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.member.MemberDialog
 
 @Composable
@@ -59,7 +61,11 @@ fun MemberListScreen(
         Column(Modifier.fillMaxSize().padding(padding)) {
             Text(
                 "家庭病历本",
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    brush = Brush.linearGradient(
+                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                    )
+                ),
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp)
             )
@@ -88,8 +94,11 @@ fun MemberListScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(items, key = { it.member.id }) { item ->
-                        AppCard(onClick = { onOpen(item.member.id) }) {
+                    itemsIndexed(items, key = { _, item -> item.member.id }) { index, item ->
+                        AppCard(
+                            modifier = Modifier.staggeredAppear(index),
+                            onClick = { onOpen(item.member.id) }
+                        ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     item.member.name,

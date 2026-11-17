@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
+import com.mvp.medarchive.ui.common.staggeredAppear
 import com.mvp.medarchive.ui.formatEpochDay
 import com.mvp.medarchive.ui.member.MemberDialog
 
@@ -134,8 +135,11 @@ fun MemberDetailScreen(
                 )
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    shown.forEach { r ->
-                        AppCard(onClick = { onOpenRecord(r.id) }) {
+                    shown.forEachIndexed { index, r ->
+                        AppCard(
+                            modifier = Modifier.staggeredAppear(index),
+                            onClick = { onOpenRecord(r.id) }
+                        ) {
                             Text(
                                 r.title,
                                 style = MaterialTheme.typography.titleSmall,

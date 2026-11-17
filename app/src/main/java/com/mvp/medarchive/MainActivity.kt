@@ -4,6 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,39 +43,48 @@ class MainActivity : ComponentActivity() {
 
                 BackHandler { if (stack.size > 1) stack = stack.dropLast(1) }
 
-                when (current) {
-                    Screen.List -> MemberListScreen(
-                        vm = viewModel(factory = MemberListViewModel.factory(container.repository)),
-                        onOpen = { id -> stack = stack + Screen.Detail(id) }
-                    )
-                    is Screen.Detail -> MemberDetailScreen(
-                        vm = viewModel(
-                            key = "member_${current.memberId}",
-                            factory = MemberDetailViewModel.factory(application, container.repository, current.memberId)
-                        ),
-                        onBack = { stack = stack.dropLast(1) },
-                        onAddRecord = { id -> stack = stack + Screen.RecordForm(id) },
-                        onOpenRecord = { id -> stack = stack + Screen.RecordDetail(id, current.memberId) }
-                    )
-                    is Screen.RecordForm -> RecordFormScreen(
-                        vm = viewModel(
-                            key = "recordform_${current.memberId}_${current.recordId}",
-                            factory = RecordFormViewModel.factory(
-                                application, container.repository, current.memberId, current.recordId
-                            )
-                        ),
-                        isEdit = current.recordId != null,
-                        onBack = { stack = stack.dropLast(1) }
-                    )
-                    is Screen.RecordDetail -> RecordDetailScreen(
-                        vm = viewModel(
-                            key = "record_${current.recordId}",
-                            factory = RecordDetailViewModel.factory(container.repository, current.recordId)
-                        ),
-                        onBack = { stack = stack.dropLast(1) },
-                        onEdit = { stack = stack + Screen.RecordForm(current.memberId, current.recordId) },
-                        onDeleted = { stack = stack.dropLast(1) }
-                    )
+                AnimatedContent(
+                    targetState = current,
+                    transitionSpec = {
+                        (fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 12 })
+                            .togetherWith(fadeOut(tween(120)))
+                    },
+                    label = "screen"
+                ) { screen ->
+                    when (screen) {
+                        Screen.List -> MemberListScreen(
+                            vm = viewModel(factory = MemberListViewModel.factory(container.repository)),
+                            onOpen = { id -> stack = stack + Screen.Detail(id) }
+                        )
+                        is Screen.Detail -> MemberDetailScreen(
+                            vm = viewModel(
+                                key = "member_${screen.memberId}",
+                                factory = MemberDetailViewModel.factory(application, container.repository, screen.memberId)
+                            ),
+                            onBack = { stack = stack.dropLast(1) },
+                            onAddRecord = { id -> stack = stack + Screen.RecordForm(id) },
+                            onOpenRecord = { id -> stack = stack + Screen.RecordDetail(id, screen.memberId) }
+                        )
+                        is Screen.RecordForm -> RecordFormScreen(
+                            vm = viewModel(
+                                key = "recordform_${screen.memberId}_${screen.recordId}",
+                                factory = RecordFormViewModel.factory(
+                                    application, container.repository, screen.memberId, screen.recordId
+                                )
+                            ),
+                            isEdit = screen.recordId != null,
+                            onBack = { stack = stack.dropLast(1) }
+                        )
+                        is Screen.RecordDetail -> RecordDetailScreen(
+                            vm = viewModel(
+                                key = "record_${screen.recordId}",
+                                factory = RecordDetailViewModel.factory(container.repository, screen.recordId)
+                            ),
+                            onBack = { stack = stack.dropLast(1) },
+                            onEdit = { stack = stack + Screen.RecordForm(screen.memberId, screen.recordId) },
+                            onDeleted = { stack = stack.dropLast(1) }
+                        )
+                    }
                 }
             }
         }
