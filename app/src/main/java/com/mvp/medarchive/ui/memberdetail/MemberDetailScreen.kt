@@ -4,26 +4,30 @@ import android.content.Intent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -40,9 +44,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,17 +55,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mvp.medarchive.billing.ProDialog
 import com.mvp.medarchive.billing.ProManager
+import com.mvp.medarchive.data.db.Member
+import com.mvp.medarchive.data.db.Record
+import com.mvp.medarchive.ui.ageFromBirthdate
 import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.AppTopBar
 import com.mvp.medarchive.ui.common.Avatar
-import com.mvp.medarchive.ui.common.StatusChip
-import com.mvp.medarchive.ui.common.staggeredAppear
-import com.mvp.medarchive.ui.formatEpochDay
+import com.mvp.medarchive.ui.common.MonthHeader
+import com.mvp.medarchive.ui.common.RecordCard
 import com.mvp.medarchive.ui.member.MemberDialog
+import com.mvp.medarchive.ui.common.staggeredAppear
+import com.mvp.medarchive.ui.monthLabel
 
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
+private val RECORD_TYPES = listOf("病历", "检查单", "处方", "用药", "疫苗", "其他")
+
+@OptIn(
+    ExperimentalSharedTransitionApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalFoundationApi::class
+)
 @Composable
 fun MemberDetailScreen(
     vm: MemberDetailViewModel,
@@ -73,10 +86,10 @@ fun MemberDetailScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val member by vm.member.collectAsState()
-    val records by vm.records.collectAsState()
-    val exporting by vm.exporting.collectAsState()
-    val shareUri by vm.shareUri.collectAsState()
+    val member by vm.member.collectAsStateWithLifecycle()
+    val records by vm.records.collectAsStateWithLifecycle()
+    val exporting by vm.exporting.collectAsStateWithLifecycle()
+    val shareUri by vm.shareUri.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
     var filterType by remember { mutableStateOf<String?>(null) }
     var showEdit by remember { mutableStateOf(false) }
@@ -107,6 +120,13 @@ fun MemberDetailScreen(
             }
             vm.consumeShareUri()
         }
+    }
+
+    val shown = remember(records, filterType) {
+        if (filterType == null) records else records.filter { it.type == filterType }
+    }
+    val grouped = remember(shown) {
+        shown.groupBy { monthLabel(it.dateEpochDay) }
     }
 
     Scaffold(
@@ -140,124 +160,87 @@ fun MemberDetailScreen(
             ) { Text("+ 添加记录") }
         }
     ) { padding ->
-        Column(
-            Modifier
+        LazyColumn(
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(padding),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             member?.let { m ->
-                AppCard {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Avatar(m.name, m.avatarPath, 64.dp)
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                m.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (m.notes.isNotBlank()) {
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    m.notes,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2
-                                )
-                            }
-                        }
+                item(key = "profile") {
+                    ProfileCard(m)
+                }
+                if (m.allergies.isNotBlank()) {
+                    item(key = "allergy") {
+                        AllergyBanner(m.allergies)
                     }
                 }
-                Spacer(Modifier.height(6.dp))
-                val hasInfo = m.birthdate.isNotBlank() || m.bloodType.isNotBlank() || m.allergies.isNotBlank()
+                val hasInfo = m.birthdate.isNotBlank() || m.bloodType.isNotBlank() || m.notes.isNotBlank()
                 if (hasInfo) {
-                    AppCard {
-                        if (m.birthdate.isNotBlank()) InfoLine("生日", m.birthdate)
-                        if (m.bloodType.isNotBlank()) InfoLine("血型", m.bloodType)
-                        if (m.allergies.isNotBlank()) InfoLine("过敏史", m.allergies, isError = true)
+                    item(key = "info") {
+                        InfoCard(m)
                     }
-                    Spacer(Modifier.height(6.dp))
                 }
             }
-            Spacer(Modifier.height(16.dp))
-            Text("记录", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = filterType == null, onClick = { filterType = null }, label = { Text("全部") })
-                val types = listOf("病历", "检查单", "处方", "用药", "疫苗", "其他")
-                types.forEach { t ->
-                    FilterChip(selected = filterType == t, onClick = { filterType = t }, label = { Text(t) })
+
+            item(key = "section") {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "就诊记录",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "共 ${shown.size} 条",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            val shown = if (filterType == null) records else records.filter { it.type == filterType }
+
+            item(key = "filters") {
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = filterType == null,
+                        onClick = { filterType = null },
+                        label = { Text("全部") }
+                    )
+                    RECORD_TYPES.forEach { t ->
+                        FilterChip(
+                            selected = filterType == t,
+                            onClick = { filterType = if (filterType == t) null else t },
+                            label = { Text(t) }
+                        )
+                    }
+                }
+            }
+
             if (shown.isEmpty()) {
-                Text(
-                    "还没有记录，点右下角添加",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                item(key = "empty") {
+                    EmptyHint(hasAny = records.isNotEmpty())
+                }
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    shown.forEachIndexed { index, r ->
-                        key(r.id) {
-                            val dismissState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = { v ->
-                                    if (v == SwipeToDismissBoxValue.EndToStart) {
-                                        pendingDeleteId = r.id
-                                    }
-                                    false
-                                }
-                            )
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                enableDismissFromStartToEnd = false,
-                                backgroundContent = {
-                                    Box(
-                                        Modifier
-                                            .fillMaxSize()
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(MaterialTheme.colorScheme.errorContainer)
-                                            .padding(horizontal = 24.dp),
-                                        contentAlignment = Alignment.CenterEnd
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.Delete,
-                                            contentDescription = "删除记录",
-                                            tint = MaterialTheme.colorScheme.onErrorContainer
-                                        )
-                                    }
-                                },
-                                modifier = Modifier.staggeredAppear(index)
-                            ) {
-                                AppCard(onClick = { onOpenRecord(r.id) }) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(
-                                                r.title,
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                maxLines = 1,
-                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                            )
-                                            Spacer(Modifier.height(2.dp))
-                                            Text(
-                                                formatEpochDay(r.dateEpochDay),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        StatusChip(
-                                            text = r.type,
-                                            container = MaterialTheme.colorScheme.secondaryContainer,
-                                            content = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                grouped.forEach { (month, list) ->
+                    item(key = "month_$month") {
+                        MonthHeader(month, list.size)
+                    }
+                    items(list, key = { it.id }) { record ->
+                        SwipeRecordRow(
+                            record = record,
+                            onClick = { onOpenRecord(record.id) },
+                            onRequestDelete = { pendingDeleteId = record.id },
+                            modifier = Modifier.staggeredAppear(0)
+                        )
                     }
                 }
             }
@@ -307,8 +290,6 @@ fun MemberDetailScreen(
                         .padding(horizontal = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.Edit, contentDescription = null)
-                    Spacer(Modifier.width(16.dp))
                     Text("编辑资料", style = MaterialTheme.typography.bodyLarge)
                 }
                 Row(
@@ -353,18 +334,149 @@ fun MemberDetailScreen(
 }
 
 @Composable
-private fun InfoLine(label: String, value: String, isError: Boolean = false) {
-    Row(Modifier.padding(vertical = 3.dp)) {
+private fun ProfileCard(m: Member) {
+    AppCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Avatar(m.name, m.avatarPath, 72.dp)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    m.name,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                val age = ageFromBirthdate(m.birthdate)
+                val meta = listOfNotNull(
+                    age?.let { "$it 岁" },
+                    m.bloodType.takeIf { it.isNotBlank() }?.let { "血型 $it" }
+                ).joinToString(" · ")
+                if (meta.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        meta,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AllergyBanner(allergies: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Filled.Warning,
+            contentDescription = "过敏警示",
+            tint = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                "过敏史",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.75f)
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                allergies,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
+    }
+}
+
+@Composable
+private fun InfoCard(m: Member) {
+    AppCard {
+        if (m.birthdate.isNotBlank()) {
+            val age = ageFromBirthdate(m.birthdate)
+            InfoLine("生日", if (age != null) "${m.birthdate}（$age 岁）" else m.birthdate)
+        }
+        if (m.bloodType.isNotBlank()) InfoLine("血型", m.bloodType)
+        if (m.notes.isNotBlank()) InfoLine("备注", m.notes)
+    }
+}
+
+@Composable
+private fun EmptyHint(hasAny: Boolean) {
+    AppCard {
+        Text(
+            if (hasAny) "这个类型下还没有记录" else "还没有记录",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            if (hasAny) "换个类型看看，或点右下角添加" else "点右下角「+ 添加记录」，先把最近一次就诊存进来",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun SwipeRecordRow(
+    record: Record,
+    onClick: () -> Unit,
+    onRequestDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { v ->
+            if (v == SwipeToDismissBoxValue.EndToStart) onRequestDelete()
+            false
+        }
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "删除记录",
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        },
+        modifier = modifier
+    ) {
+        RecordCard(record = record, onClick = onClick)
+    }
+}
+
+@Composable
+private fun InfoLine(label: String, value: String) {
+    Row(Modifier.padding(vertical = 4.dp)) {
         Text(
             label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(64.dp)
+            modifier = Modifier.width(56.dp)
         )
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            modifier = Modifier.weight(1f)
         )
     }
 }

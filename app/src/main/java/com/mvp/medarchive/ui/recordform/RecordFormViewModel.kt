@@ -101,9 +101,10 @@ class RecordFormViewModel(
             val sb = StringBuilder()
             try {
                 for (p in paths) {
-                    val bmp = BitmapFactory.decodeFile(p) ?: continue
+                    val bmp = decodeSampled(p) ?: continue
                     val result = Tasks.await(recognizer.process(InputImage.fromBitmap(bmp, 0)))
                     if (result.text.isNotBlank()) sb.append(result.text).append("\n")
+                    bmp.recycle()
                 }
             } catch (e: Exception) {
                 // handled below
@@ -135,6 +136,18 @@ class RecordFormViewModel(
     }
 
     private data class ParsedOcr(val dateEpochDay: Long?, val hospital: String?)
+
+    /** 大图按 2000px 采样解码，避免 OCR 时 OOM。 */
+    private fun decodeSampled(path: String, maxSide: Int = 2000): android.graphics.Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        while (bounds.outWidth / sample > maxSide || bounds.outHeight / sample > maxSide) {
+            sample *= 2
+        }
+        return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+    }
 
     private fun parseStructured(text: String): ParsedOcr {
         val datePattern = Regex("""(\d{4})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})""")

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -50,11 +51,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.mvp.medarchive.R
+import com.mvp.medarchive.ui.ageFromBirthdate
 import com.mvp.medarchive.ui.common.AppCard
 import com.mvp.medarchive.ui.common.Avatar
 import com.mvp.medarchive.ui.common.CountUpText
@@ -79,7 +82,7 @@ fun MemberListScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val items by vm.items.collectAsState()
+    val items by vm.items.collectAsStateWithLifecycle()
     var showDialog by remember { mutableStateOf(false) }
     var showLock by remember { mutableStateOf(false) }
     var showPro by remember { mutableStateOf(false) }
@@ -116,9 +119,14 @@ fun MemberListScreen(
         }
     }
     var query by remember { mutableStateOf("") }
-    val filtered = if (query.isBlank()) items else items.filter {
-        it.member.name.contains(query, ignoreCase = true) ||
-            it.member.allergies.contains(query, ignoreCase = true)
+    var debouncedQuery by remember { mutableStateOf("") }
+    LaunchedEffect(query) {
+        delay(200)
+        debouncedQuery = query
+    }
+    val filtered = if (debouncedQuery.isBlank()) items else items.filter {
+        it.member.name.contains(debouncedQuery, ignoreCase = true) ||
+            it.member.allergies.contains(debouncedQuery, ignoreCase = true)
     }
 
     LaunchedEffect(Unit) {
@@ -241,7 +249,7 @@ fun MemberListScreen(
 
                     filtered.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            "没有匹配「$query」的成员",
+                            "没有匹配「$debouncedQuery」的成员",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -275,25 +283,50 @@ fun MemberListScreen(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                        if (item.member.birthdate.isNotBlank()) {
+                                        val age = ageFromBirthdate(item.member.birthdate)
+                                        val meta = listOfNotNull(
+                                            age?.let { "$it 岁" },
+                                            item.member.bloodType.takeIf { it.isNotBlank() }?.let { "血型 $it" },
+                                            item.member.birthdate.takeIf { age == null && it.isNotBlank() }
+                                                ?.let { "生日 $it" }
+                                        ).joinToString(" · ")
+                                        if (meta.isNotBlank()) {
                                             Spacer(Modifier.height(2.dp))
                                             Text(
-                                                "生日 ${item.member.birthdate}",
+                                                meta,
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                         if (item.member.allergies.isNotBlank()) {
-                                            Spacer(Modifier.height(2.dp))
-                                            Text(
-                                                "过敏史 ${item.member.allergies}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.error
-                                            )
+                                            Spacer(Modifier.height(3.dp))
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    Icons.Filled.Warning,
+                                                    contentDescription = "过敏",
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(Modifier.width(4.dp))
+                                                Text(
+                                                    "过敏：${item.member.allergies}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
                                         }
                                     }
                                     Spacer(Modifier.width(8.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(
+                                        Modifier
+                                            .clip(RoundedCornerShape(50))
+                                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         CountUpText(
                                             target = item.recordCount,
                                             style = MaterialTheme.typography.labelSmall,

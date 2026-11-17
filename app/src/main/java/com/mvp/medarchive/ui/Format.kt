@@ -3,6 +3,8 @@ package com.mvp.medarchive.ui
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.Locale
 
@@ -11,3 +13,46 @@ fun formatEpochDay(day: Long): String =
 
 fun formatTime(ms: Long): String =
     SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(ms))
+
+private val monthFormatter = DateTimeFormatter.ofPattern("yyyy年M月", Locale.CHINA)
+private val fullDateFormatter = DateTimeFormatter.ofPattern("yyyy年M月d日", Locale.CHINA)
+
+/** 用于分组标题，如 2026年11月 */
+fun monthLabel(epochDay: Long): String =
+    runCatching { LocalDate.ofEpochDay(epochDay).format(monthFormatter) }.getOrDefault("")
+
+/** 详情页的大日期：2026年11月15日 周六 */
+fun fullDateWithWeekday(epochDay: Long): String = runCatching {
+    val d = LocalDate.ofEpochDay(epochDay)
+    val weekday = d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.CHINA)
+    "${d.format(fullDateFormatter)} $weekday"
+}.getOrDefault("")
+
+/** 列表里的“人话”日期：今天 / 昨天 / 3天前 / 2025年12月31日 */
+fun humanDate(epochDay: Long, today: LocalDate = LocalDate.now()): String = runCatching {
+    val d = LocalDate.ofEpochDay(epochDay)
+    val days = ChronoUnit.DAYS.between(d, today)
+    when {
+        days == 0L -> "今天"
+        days == 1L -> "昨天"
+        days in 2..6 -> "${days}天前"
+        d.year == today.year -> "${d.monthValue}月${d.dayOfMonth}日"
+        else -> d.format(fullDateFormatter)
+    }
+}.getOrDefault(formatEpochDay(epochDay))
+
+/** 从生日算年龄；解析失败返回 null。支持 1990-01-01 / 1990/1/1 / 1990年1月1日 */
+fun ageFromBirthdate(birthdate: String, today: LocalDate = LocalDate.now()): Int? {
+    val text = birthdate.trim()
+    if (text.isEmpty()) return null
+    val normalized = text.replace("年", "-").replace("月", "-").replace("日", "")
+        .replace("/", "-").replace(".", "-")
+    val parts = normalized.split("-").filter { it.isNotBlank() }
+    if (parts.size < 3) return null
+    val (y, m, d) = runCatching {
+        Triple(parts[0].toInt(), parts[1].toInt(), parts[2].toInt())
+    }.getOrNull() ?: return null
+    val birth = runCatching { LocalDate.of(y, m, d) }.getOrNull() ?: return null
+    if (birth.isAfter(today)) return null
+    return ChronoUnit.YEARS.between(birth, today).toInt()
+}
