@@ -9,6 +9,8 @@
 
 ### 1. 成员列表（01-member-list.png）
 
+<img src="docs/screenshots/01-member-list.png" width="320" alt="成员列表">
+
 - 顶部渐变 Hero：成员数、记录总数、「查看全部记录 ›」入口。
 - 搜索框：按成员姓名、过敏史实时过滤（200ms 防抖）。
 - 成员卡片：头像（可自定义或首字）、姓名、`36 岁 · 血型 O`、红色 `⚠ 过敏：xxx`、记录数胶囊。
@@ -17,6 +19,8 @@
 - 支持下拉刷新、卡片逐条淡入、按压缩放。
 
 ### 2. 成员详情（02-member-detail.png）
+
+<img src="docs/screenshots/02-member-detail.png" width="320" alt="成员详情">
 
 - 资料卡：大头像、姓名、`年龄 · 血型`。
 - 过敏史独立红色警示条（带图标），比普通信息更醒目。
@@ -27,11 +31,15 @@
 
 ### 3. 全部记录（03-all-records.png）
 
+<img src="docs/screenshots/03-all-records.png" width="320" alt="全部记录">
+
 - 跨成员聚合，按月份分组，显示成员名 + 相对日期。
 - 搜索范围：标题、医院、备注、成员名。
 - 类型筛选 chips（病历/检查单/处方/用药/疫苗）。
 
 ### 4. 记录详情（04-record-detail.png）
+
+<img src="docs/screenshots/04-record-detail.png" width="320" alt="记录详情">
 
 - 类型徽标 + 大标题 + `2026年11月15日 周日` + 相对时间。
 - 医院/备注分块展示，备注可长按复制。
@@ -39,6 +47,8 @@
 - 删除记录需二次确认（记录 + 照片一起删除）。
 
 ### 5. 记录表单（05-record-form.png）
+
+<img src="docs/screenshots/05-record-form.png" width="320" alt="记录表单">
 
 - 类型 chips；标题、日期（日期选择器）、医院、备注。
 - 报告图片区：
@@ -51,12 +61,16 @@
 
 ### 6. 扫描校正（06-scan-crop.png）
 
+<img src="docs/screenshots/06-scan-crop.png" width="320" alt="扫描校正">
+
 - 拍照后进入全屏校正页，四角可拖动，默认内缩 8%。
 - 拖动限制在各自半区，避免四角交叉产生无效四边形。
 - 底部「增强对比」开关；「完成」后按 2600px 重新加载原图做透视变换（`Matrix.setPolyToPoly`），再输出 JPEG。
 - 取消/返回会清理相机临时文件。
 
 ### 7. 用药提醒（07-reminder-dialog.png）
+
+<img src="docs/screenshots/07-reminder-dialog.png" width="320" alt="用药提醒">
 
 - 药品名、剂量（可空）、每天多个提醒时间（时间选择器）、启用开关。
 - 编辑模式支持删除；提醒卡片上可直接开关或点时间打卡。
@@ -66,12 +80,16 @@
 
 ### 8. 设置与备份（08-settings.png）
 
+<img src="docs/screenshots/08-settings.png" width="320" alt="设置与备份">
+
 - 语言 / Language：中文、English、跟随系统（立即生效）。
 - 大字号：整体字号 ×1.16，行高同步放大，适合长辈。
 - 导出备份（含照片）：打包 `data.json` + `media/` 为 zip，走系统分享。
 - 导入备份（Pro）：选择 zip 后重建成员/记录/照片，并提示导入条数。
 
 ### 9. 语言切换（09-language.png）
+
+<img src="docs/screenshots/09-language.png" width="320" alt="语言切换">
 
 - `Lang` + `T(zh, en)`：偏好存 SharedPreferences，切换后 Compose 立即重组。
 - 日期、年龄、计数、通知文案都有英文分支。
